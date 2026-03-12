@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,11 +8,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Firebase (COMPAT version so it works with normal JS) -->
+<!-- Firebase COMPAT -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
+
 const firebaseConfig = {
   apiKey: "AIzaSyCymkS_gjS2xpTEdBtSKbCXE69hDr73UH8",
   authDomain: "expo-floorplan.firebaseapp.com",
@@ -22,7 +24,10 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+
+// 🔹 Make database GLOBAL so script.js can use it
+window.db = firebase.firestore();
+
 </script>
 
 </head>
@@ -58,10 +63,11 @@ const db = firebase.firestore();
   <div id="floor"></div>
 </div>
 
-<!-- Booth Edit Modal -->
+<!-- Booth Modal -->
 <div id="boothModal" class="modal">
   <div class="modal-content">
     <h3>Edit Booth</h3>
+
     <p>Booth ID: <span id="boothId"></span></p>
 
     <label>Status:</label>
@@ -71,20 +77,22 @@ const db = firebase.firestore();
     </select>
 
     <label>Exhibitor Name:</label>
-    <input type="text" id="boothName" placeholder="Enter exhibitor name">
+    <input type="text" id="boothName">
 
     <label>Contractor Name (optional):</label>
-    <input type="text" id="contractorName" placeholder="Enter contractor name">
+    <input type="text" id="contractorName">
 
     <div style="margin-top:10px;">
       <button id="saveBoothBtn">Save</button>
       <button onclick="closeModal()">Cancel</button>
     </div>
+
   </div>
 </div>
 
-<!-- Your existing script -->
+<!-- Your main script -->
 <script src="script.js"></script>
 
 </body>
 </html>
+```
