@@ -1,4 +1,3 @@
-```javascript
 // --- Firebase reference ---
 const db = window.db;
 
@@ -464,4 +463,5 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
 initFloor();
 updatePanels();
 ```
+
 
