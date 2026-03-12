@@ -1,6 +1,6 @@
 ```javascript
 // --- Firebase reference ---
-const db = firebase.firestore();
+const db = window.db;
 
 // --- Data ---
 const halls = [
@@ -464,3 +464,4 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
 initFloor();
 updatePanels();
 ```
+
