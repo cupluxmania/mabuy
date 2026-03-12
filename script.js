@@ -1,3 +1,4 @@
+```javascript
 // --- Firebase reference ---
 const db = firebase.firestore();
 
@@ -14,6 +15,7 @@ const halls = [
 
 const floor = document.getElementById("floor");
 let currentBooth = null;
+
 
 // --- Generate floor ---
 function initFloor(){
@@ -37,13 +39,17 @@ function initFloor(){
     const grid=document.createElement("div");
     grid.className="grid";
 
-    if(hall.name==="Ambulance"){
+    // --- Letter booths (Ambulance) ---
+    if(typeof hall.start === "string"){
 
       for(let i=65;i<=90;i++){
         grid.appendChild(createBooth(String.fromCharCode(i), hallDiv));
       }
 
-    }else{
+    }
+
+    // --- Numeric booths ---
+    else{
 
       let start=parseInt(hall.start);
       let endNum=parseInt(hall.end);
@@ -71,6 +77,7 @@ function initFloor(){
 
 }
 
+
 // --- Booth creation ---
 function createBooth(id,hallDiv){
 
@@ -95,6 +102,7 @@ function createBooth(id,hallDiv){
 
 }
 
+
 // --- Update hall stats ---
 function updateHallStats(hallDiv){
 
@@ -104,10 +112,8 @@ function updateHallStats(hallDiv){
   let booked=0;
 
   booths.forEach(b=>{
-
     if(b.dataset.status==="available") available++;
     else booked++;
-
   });
 
   const bubbles=hallDiv.querySelectorAll(".bubble");
@@ -116,6 +122,7 @@ function updateHallStats(hallDiv){
   bubbles[1].innerText=booked;
 
 }
+
 
 // --- Booth modal ---
 function openBoothPopup(booth,hallDiv){
@@ -135,6 +142,7 @@ function closeModal(){
   document.getElementById("boothModal").style.display="none";
 }
 
+
 // --- Save booth ---
 document.getElementById("saveBoothBtn").addEventListener("click",()=>{
 
@@ -143,10 +151,8 @@ document.getElementById("saveBoothBtn").addEventListener("click",()=>{
   const contractor=document.getElementById("contractorName").value.trim();
 
   if(status==="booked" && name.length<4){
-
     alert("Exhibitor name must be at least 4 characters when booking!");
     return;
-
   }
 
   const booth=currentBooth.booth;
@@ -167,6 +173,7 @@ document.getElementById("saveBoothBtn").addEventListener("click",()=>{
 
 });
 
+
 // --- Save data ---
 function saveBoothData(booth){
 
@@ -184,6 +191,7 @@ function saveBoothData(booth){
 
 }
 
+
 // --- Load booths ---
 function loadSavedBooths(){
 
@@ -192,9 +200,7 @@ function loadSavedBooths(){
     const saved={};
 
     snapshot.forEach(doc=>{
-
       saved[doc.id]=doc.data();
-
     });
 
     localStorage.setItem("floorData",JSON.stringify(saved));
@@ -222,6 +228,7 @@ function loadSavedBooths(){
   });
 
 }
+
 
 // --- Drag floor ---
 const floorContainer=document.getElementById("floorContainer");
@@ -258,6 +265,7 @@ floorContainer.addEventListener("mousemove",(e)=>{
 
 });
 
+
 // --- Zoom ---
 let zoomLevel=1;
 
@@ -285,6 +293,7 @@ function applyZoom(){
   zoomDisplay.innerText=`${Math.round(zoomLevel*100)}%`;
 
 }
+
 
 // --- Panels ---
 const filledPanel=document.getElementById("filledPanel");
@@ -353,6 +362,7 @@ function updatePanels(){
 
 }
 
+
 // --- Toggle panels ---
 document.getElementById("filledBoothsBtn").addEventListener("click",()=>{
 
@@ -368,6 +378,7 @@ document.getElementById("analyticsBtn").addEventListener("click",()=>{
 
 });
 
+
 // --- Close panels when clicking outside ---
 document.addEventListener("click",(e)=>{
 
@@ -380,6 +391,7 @@ document.addEventListener("click",(e)=>{
   }
 
 });
+
 
 // --- Export XLSX ---
 document.getElementById("exportBtn").addEventListener("click",()=>{
@@ -408,6 +420,7 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
   XLSX.writeFile(wb,"ExpoBooths.xlsx");
 
 });
+
 
 // --- Import XLSX ---
 document.getElementById("uploadBtn").addEventListener("click",()=>{
@@ -459,10 +472,8 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
 
 });
 
+
 // --- Initialize ---
 initFloor();
 updatePanels();
 ```
-
-
-
