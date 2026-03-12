@@ -19,8 +19,8 @@
 <button id="zoomOut">Zoom -</button>
 <span id="zoomLevel">100%</span>
 
-<button id="exportBtn">Export Excel</button>
-<button id="uploadBtn">Import Excel</button>
+<button id="exportBtn">Export</button>
+<button id="uploadBtn">Import</button>
 
 <input type="file" id="importFile" hidden>
 
@@ -63,7 +63,10 @@
 const firebaseConfig = {
 apiKey: "AIzaSyCymkS_gjS2xpTEdBtSKbCXE69hDr73UH8",
 authDomain: "expo-floorplan.firebaseapp.com",
-projectId: "expo-floorplan"
+projectId: "expo-floorplan",
+storageBucket: "expo-floorplan.firebasestorage.app",
+messagingSenderId: "429071439083",
+appId: "1:429071439083:web:c0a8e5272d815c8e4e5aae"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -77,4 +80,3 @@ firebase.initializeApp(firebaseConfig);
 
 </body>
 </html>
-
