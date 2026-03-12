@@ -2,9 +2,31 @@
 <html>
 <head>
 <title>Expo Floorplan Manager</title>
+
 <link rel="stylesheet" href="style.css">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Firebase (COMPAT version so it works with normal JS) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCymkS_gjS2xpTEdBtSKbCXE69hDr73UH8",
+  authDomain: "expo-floorplan.firebaseapp.com",
+  projectId: "expo-floorplan",
+  storageBucket: "expo-floorplan.firebasestorage.app",
+  messagingSenderId: "429071439083",
+  appId: "1:429071439083:web:c0a8e5272d815c8e4e5aae"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+
 </head>
+
 <body>
 
 <h1>Expo Floorplan</h1>
@@ -41,15 +63,19 @@
   <div class="modal-content">
     <h3>Edit Booth</h3>
     <p>Booth ID: <span id="boothId"></span></p>
+
     <label>Status:</label>
     <select id="boothStatus">
       <option value="available">Available</option>
       <option value="booked">Booked</option>
     </select>
+
     <label>Exhibitor Name:</label>
     <input type="text" id="boothName" placeholder="Enter exhibitor name">
+
     <label>Contractor Name (optional):</label>
     <input type="text" id="contractorName" placeholder="Enter contractor name">
+
     <div style="margin-top:10px;">
       <button id="saveBoothBtn">Save</button>
       <button onclick="closeModal()">Cancel</button>
@@ -57,6 +83,8 @@
   </div>
 </div>
 
+<!-- Your existing script -->
 <script src="script.js"></script>
+
 </body>
 </html>
