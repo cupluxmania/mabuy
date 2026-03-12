@@ -1,135 +1,69 @@
-// --- Firebase reference ---
 const db = firebase.firestore();
 
-// --- Data ---
-const halls = [
-  {name:"Hall 5", start:5001, end:"5078A"},
-  {name:"Hall 6", start:6001, end:"6189A"},
-  {name:"Hall 7", start:7001, end:"7185A"},
-  {name:"Hall 8", start:8001, end:"8181A"},
-  {name:"Hall 9", start:9001, end:"9191A"},
-  {name:"Hall 10", start:1001, end:"1151A"},
-  {name:"Ambulance", start:"A", end:"Z"}
+const halls=[
+{name:"Hall 5",start:5001,end:5078},
+{name:"Hall 6",start:6001,end:6189},
+{name:"Hall 7",start:7001,end:7185}
 ];
 
-const floor = document.getElementById("floor");
-let currentBooth = null;
+const floor=document.getElementById("floor");
 
-// --- Generate floor ---
 function initFloor(){
 
 floor.innerHTML="";
 
-halls.forEach(hall => {
+halls.forEach(h=>{
 
-const hallDiv=document.createElement("div");
-hallDiv.className="hall";
+const hall=document.createElement("div");
+hall.className="hall";
 
 const header=document.createElement("div");
 header.className="hallHeader";
-
-header.innerHTML=`
-<span>${hall.name}</span>
-<span class="bubble available">0</span>
-<span class="bubble booked">0</span>
-`;
+header.innerText=h.name;
 
 const grid=document.createElement("div");
 grid.className="grid";
 
-if(hall.name==="Ambulance"){
-
-for(let i=65;i<=90;i++){
-grid.appendChild(createBooth(String.fromCharCode(i), hallDiv));
-}
-
-}else{
-
-let start=parseInt(hall.start);
-let endNum=parseInt(hall.end);
-const endLetter=hall.end.toString().replace(/\d+/,"");
-
-for(let i=start;i<=endNum;i++){
-
-const boothID=i+(i===endNum?endLetter:"");
-
-grid.appendChild(createBooth(boothID,hallDiv));
-
-}
-
-}
-
-hallDiv.appendChild(header);
-hallDiv.appendChild(grid);
-floor.appendChild(hallDiv);
-
-updateHallStats(hallDiv);
-
-});
-
-loadSavedBooths();
-updatePanels();
-
-}
-
-// --- Booth creation ---
-function createBooth(id,hallDiv){
+for(let i=h.start;i<=h.end;i++){
 
 const booth=document.createElement("div");
 
 booth.className="booth available";
-booth.innerText=id;
+booth.innerText=i;
 
+booth.dataset.id=i;
 booth.dataset.status="available";
 booth.dataset.name="";
-booth.dataset.contractor="";
-booth.dataset.id=id;
 
-booth.setAttribute("data-id",id);
+booth.setAttribute("data-id",i);
 booth.setAttribute("data-name","");
 
-booth.addEventListener("click",(e)=>{
+booth.onclick=()=>openBoothPopup(booth);
 
-e.stopPropagation();
-openBoothPopup(booth,hallDiv);
-
-});
-
-return booth;
+grid.appendChild(booth);
 
 }
 
-// --- Update hall stats ---
-function updateHallStats(hallDiv){
+hall.appendChild(header);
+hall.appendChild(grid);
 
-const booths=hallDiv.querySelectorAll(".booth");
-
-let available=0;
-let booked=0;
-
-booths.forEach(b=>{
-
-if(b.dataset.status==="available") available++;
-else booked++;
+floor.appendChild(hall);
 
 });
 
-const bubbles=hallDiv.querySelectorAll(".bubble");
-
-bubbles[0].innerText=available;
-bubbles[1].innerText=booked;
+loadSavedBooths();
 
 }
 
-// --- Booth modal ---
-function openBoothPopup(booth,hallDiv){
+let currentBooth=null;
 
-currentBooth={booth,hallDiv};
+function openBoothPopup(booth){
 
-document.getElementById("boothId").innerText=booth.innerText;
+currentBooth=booth;
+
+document.getElementById("boothId").innerText=booth.dataset.id;
 document.getElementById("boothStatus").value=booth.dataset.status;
-document.getElementById("boothName").value=booth.dataset.name || "";
-document.getElementById("contractorName").value=booth.dataset.contractor || "";
+document.getElementById("boothName").value=booth.dataset.name;
 
 document.getElementById("boothModal").style.display="block";
 
@@ -139,109 +73,73 @@ function closeModal(){
 document.getElementById("boothModal").style.display="none";
 }
 
-// --- Save booth ---
-document.getElementById("saveBoothBtn").addEventListener("click",()=>{
+document.getElementById("saveBoothBtn").onclick=function(){
 
-let status=document.getElementById("boothStatus").value;
-let name=document.getElementById("boothName").value.trim();
-let contractor=document.getElementById("contractorName").value.trim();
+const status=document.getElementById("boothStatus").value;
 
-/* Auto clear if available */
+let name=document.getElementById("boothName").value;
+
 if(status==="available"){
 name="";
-contractor="";
 }
 
-if(status==="booked" && name.length<4){
-alert("Exhibitor name must be at least 4 characters!");
-return;
-}
+currentBooth.dataset.status=status;
+currentBooth.dataset.name=name;
 
-const booth=currentBooth.booth;
+currentBooth.className="booth "+status;
 
-booth.dataset.status=status;
-booth.dataset.name=name;
-booth.dataset.contractor=contractor;
+currentBooth.setAttribute("data-name",name);
 
-booth.setAttribute("data-name",name);
-
-booth.className="booth "+status;
-
-saveBoothData(booth);
-
-updateHallStats(currentBooth.hallDiv);
+saveBoothData(currentBooth);
 
 closeModal();
 
-updatePanels();
-
-});
-
-// --- Save data ---
-function saveBoothData(booth){
-
-const saved=JSON.parse(localStorage.getItem("floorData") || "{}");
-
-saved[booth.dataset.id]={
-status:booth.dataset.status,
-name:booth.dataset.name,
-contractor:booth.dataset.contractor
 };
 
-localStorage.setItem("floorData",JSON.stringify(saved));
+function saveBoothData(booth){
 
-db.collection("booths").doc(booth.dataset.id).set(saved[booth.dataset.id]);
+db.collection("booths").doc(booth.dataset.id).set({
+
+status:booth.dataset.status,
+name:booth.dataset.name
+
+});
 
 }
 
-// --- Load booths ---
 function loadSavedBooths(){
 
-db.collection("booths").onSnapshot((snapshot)=>{
-
-const saved={};
+db.collection("booths").get().then(snapshot=>{
 
 snapshot.forEach(doc=>{
-saved[doc.id]=doc.data();
-});
 
-localStorage.setItem("floorData",JSON.stringify(saved));
+const booth=document.querySelector(`[data-id='${doc.id}']`);
 
-document.querySelectorAll(".booth").forEach(b=>{
+if(!booth) return;
 
-const id=b.dataset.id;
+booth.dataset.status=doc.data().status;
+booth.dataset.name=doc.data().name;
 
-if(saved[id]){
+booth.className="booth "+doc.data().status;
 
-b.dataset.status=saved[id].status;
-b.dataset.name=saved[id].name;
-b.dataset.contractor=saved[id].contractor;
-
-b.className="booth "+saved[id].status;
-
-b.setAttribute("data-name",saved[id].name);
-
-}
+booth.setAttribute("data-name",doc.data().name);
 
 });
-
-document.querySelectorAll(".hall").forEach(updateHallStats);
-
-updatePanels();
 
 });
 
 }
 
-// --- Drag floor ---
+/* DRAG */
+
 const floorContainer=document.getElementById("floorContainer");
 
-let isDown=false;
+let isDragging=false;
 let startX,startY,scrollLeft,scrollTop;
 
-floorContainer.addEventListener("mousedown",(e)=>{
+floorContainer.addEventListener("mousedown",e=>{
 
-isDown=true;
+isDragging=true;
 
 startX=e.pageX-floorContainer.offsetLeft;
 startY=e.pageY-floorContainer.offsetTop;
@@ -249,238 +147,133 @@ startY=e.pageY-floorContainer.offsetTop;
 scrollLeft=floorContainer.scrollLeft;
 scrollTop=floorContainer.scrollTop;
 
+floorContainer.style.cursor="grabbing";
+
 });
 
-floorContainer.addEventListener("mouseleave",()=>{isDown=false;});
-floorContainer.addEventListener("mouseup",()=>{isDown=false;});
+floorContainer.addEventListener("mouseup",()=>{
 
-floorContainer.addEventListener("mousemove",(e)=>{
+isDragging=false;
+floorContainer.style.cursor="grab";
 
-if(!isDown) return;
+});
+
+floorContainer.addEventListener("mouseleave",()=>{
+
+isDragging=false;
+floorContainer.style.cursor="grab";
+
+});
+
+floorContainer.addEventListener("mousemove",e=>{
+
+if(!isDragging) return;
 
 e.preventDefault();
 
 const x=e.pageX-floorContainer.offsetLeft;
 const y=e.pageY-floorContainer.offsetTop;
 
-floorContainer.scrollLeft=scrollLeft-(x-startX)*2;
-floorContainer.scrollTop=scrollTop-(y-startY)*2;
+floorContainer.scrollLeft=scrollLeft-(x-startX);
+floorContainer.scrollTop=scrollTop-(y-startY);
 
 });
 
-// --- Zoom ---
-let zoomLevel=1;
+/* ZOOM */
 
-const zoomInBtn=document.getElementById("zoomIn");
-const zoomOutBtn=document.getElementById("zoomOut");
-const zoomDisplay=document.getElementById("zoomLevel");
+let zoom=1;
 
-zoomInBtn.addEventListener("click",()=>{
+document.getElementById("zoomIn").onclick=function(){
 
-zoomLevel+=0.1;
-applyZoom();
+zoom+=0.1;
 
-});
+floor.style.transform=`scale(${zoom})`;
 
-zoomOutBtn.addEventListener("click",()=>{
-
-zoomLevel=Math.max(0.1,zoomLevel-0.1);
-applyZoom();
-
-});
-
-function applyZoom(){
-
-floor.style.transform=`scale(${zoomLevel})`;
-zoomDisplay.innerText=`${Math.round(zoomLevel*100)}%`;
-
-}
-
-// --- Panels ---
-const filledPanel=document.getElementById("filledPanel");
-const analyticsPanel=document.getElementById("analyticsPanel");
-
-function updatePanels(){
-
-const saved=JSON.parse(localStorage.getItem("floorData") || "{}");
-
-filledPanel.innerHTML="";
-
-for(const id in saved){
-
-if(saved[id].status==="booked"){
-
-const div=document.createElement("div");
-
-div.innerText=`${id}: ${saved[id].name}`;
-
-div.onclick=()=>{
-
-const booth=document.querySelector(`.booth[data-id='${id}']`);
-
-booth.scrollIntoView({
-behavior:"smooth",
-block:"center",
-inline:"center"
-});
-
-booth.classList.add("selectedBooth");
-
-setTimeout(()=>booth.classList.remove("selectedBooth"),1500);
-
-filledPanel.style.display="none";
+document.getElementById("zoomLevel").innerText=Math.round(zoom*100)+"%";
 
 };
 
-filledPanel.appendChild(div);
+document.getElementById("zoomOut").onclick=function(){
 
-}
+zoom-=0.1;
 
-}
+floor.style.transform=`scale(${zoom})`;
 
-let total=0,booked=0;
+document.getElementById("zoomLevel").innerText=Math.round(zoom*100)+"%";
+
+};
+
+/* EXPORT */
+
+document.getElementById("exportBtn").onclick=function(){
+
+const data=[];
 
 document.querySelectorAll(".booth").forEach(b=>{
 
-total++;
+data.push({
 
-if(b.dataset.status==="booked") booked++;
-
-});
-
-analyticsPanel.innerHTML=`
-Total booths: ${total}<br>
-Booked booths: ${booked}<br>
-Available booths: ${total-booked}
-`;
-
-}
-
-// --- Panel buttons ---
-const filledBtn=document.getElementById("filledBoothsBtn");
-const analyticsBtn=document.getElementById("analyticsBtn");
-
-filledBtn.addEventListener("click",(e)=>{
-
-const rect=filledBtn.getBoundingClientRect();
-
-filledPanel.style.top=rect.bottom+"px";
-filledPanel.style.left=rect.left+"px";
-
-filledPanel.style.display=
-filledPanel.style.display==="block"?"none":"block";
-
-analyticsPanel.style.display="none";
+Booth:b.dataset.id,
+Status:b.dataset.status,
+Exhibitor:b.dataset.name
 
 });
 
-analyticsBtn.addEventListener("click",(e)=>{
-
-const rect=analyticsBtn.getBoundingClientRect();
-
-analyticsPanel.style.top=rect.bottom+"px";
-analyticsPanel.style.left=rect.left+"px";
-
-analyticsPanel.style.display=
-analyticsPanel.style.display==="block"?"none":"block";
-
-filledPanel.style.display="none";
-
 });
 
-// --- Close panels when clicking outside ---
-document.addEventListener("click",(e)=>{
-
-if(!filledPanel.contains(e.target) && e.target!==filledBtn){
-filledPanel.style.display="none";
-}
-
-if(!analyticsPanel.contains(e.target) && e.target!==analyticsBtn){
-analyticsPanel.style.display="none";
-}
-
-});
-
-// --- Export XLSX ---
-document.getElementById("exportBtn").addEventListener("click",()=>{
-
-const saved=JSON.parse(localStorage.getItem("floorData") || "{}");
+const ws=XLSX.utils.json_to_sheet(data);
 
 const wb=XLSX.utils.book_new();
 
-const ws_data=[["Booth ID","Status","Exhibitor","Contractor"]];
-
-for(const id in saved){
-
-ws_data.push([
-id,
-saved[id].status,
-saved[id].name,
-saved[id].contractor
-]);
-
-}
-
-const ws=XLSX.utils.aoa_to_sheet(ws_data);
-
 XLSX.utils.book_append_sheet(wb,ws,"Booths");
 
-XLSX.writeFile(wb,"ExpoBooths.xlsx");
+XLSX.writeFile(wb,"booths.xlsx");
 
-});
+};
 
-// --- Import XLSX ---
-document.getElementById("uploadBtn").addEventListener("click",()=>{
+/* IMPORT */
+
+document.getElementById("uploadBtn").onclick=function(){
+
 document.getElementById("importFile").click();
-});
 
-document.getElementById("importFile").addEventListener("change",(e)=>{
+};
+
+document.getElementById("importFile").addEventListener("change",function(e){
 
 const file=e.target.files[0];
 
-if(!file) return;
-
 const reader=new FileReader();
 
-reader.onload=(evt)=>{
+reader.onload=function(evt){
 
-const data=new Uint8Array(evt.target.result);
-
-const wb=XLSX.read(data,{type:'array'});
+const wb=XLSX.read(evt.target.result,{type:"binary"});
 
 const ws=wb.Sheets[wb.SheetNames[0]];
 
-const json=XLSX.utils.sheet_to_json(ws,{
-header:["id","status","name","contractor"],
-defval:""
-});
+const data=XLSX.utils.sheet_to_json(ws);
 
-json.slice(1).forEach(row=>{
+data.forEach(row=>{
 
-const booth=document.querySelector(`.booth[data-id='${row.id}']`);
+const booth=document.querySelector(`[data-id='${row.Booth}']`);
 
-if(booth){
+if(!booth) return;
 
-booth.dataset.status=row.status;
-booth.dataset.name=row.name;
-booth.dataset.contractor=row.contractor;
+booth.dataset.status=row.Status;
+booth.dataset.name=row.Exhibitor;
 
-booth.className="booth "+row.status;
+booth.className="booth "+row.Status;
 
-booth.setAttribute("data-name",row.name);
+booth.setAttribute("data-name",row.Exhibitor);
 
 saveBoothData(booth);
-
-}
 
 });
 
 };
 
-reader.readAsArrayBuffer(file);
+reader.readAsBinaryString(file);
 
 });
 
-// --- Initialize ---
 initFloor();
-updatePanels();
