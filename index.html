@@ -1,40 +1,95 @@
+```html
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Expo Booth Manager</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <link rel="stylesheet" href="style.css">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<!-- XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 </head>
 
 <body>
 
+<!-- ================= TOP BAR (Frozen) ================= -->
+
+<div id="topBar">
+
 <h1>Expo Booth Manager</h1>
+
+<div id="legend">
+
+<div class="legendItem">
+<span class="legendColor available"></span>
+Available
+</div>
+
+<div class="legendItem">
+<span class="legendColor booked"></span>
+Booked
+</div>
+
+</div>
 
 <div id="menu">
 
-<button id="zoomIn">Zoom +</button>
-<button id="zoomOut">Zoom -</button>
+<button class="menuBtn" id="zoomIn">Zoom +</button>
+<button class="menuBtn" id="zoomOut">Zoom -</button>
+
 <span id="zoomLevel">100%</span>
 
-<button id="exportBtn">Export</button>
-<button id="uploadBtn">Import</button>
+<button class="menuBtn" id="filledBoothsBtn">
+Filled Booths
+</button>
+
+<button class="menuBtn" id="analyticsBtn">
+Analytics
+</button>
+
+<button class="menuBtn" id="exportBtn">
+Export XLSX
+</button>
+
+<button class="menuBtn" id="uploadBtn">
+Import XLSX
+</button>
 
 <input type="file" id="importFile" hidden>
 
 </div>
 
+</div>
+
+<!-- ================= PAGE CONTENT ================= -->
+
+<div id="content">
+
 <div id="floorContainer">
 <div id="floor"></div>
 </div>
 
-<!-- Modal -->
+</div>
+
+<!-- ================= PANELS ================= -->
+
+<div id="filledPanel" class="panel"></div>
+
+<div id="analyticsPanel" class="panel"></div>
+
+<!-- ================= BOOTH MODAL ================= -->
 
 <div id="boothModal" class="modal">
 
-<div class="modalContent">
+<div class="modal-content">
 
 <h3>Booth <span id="boothId"></span></h3>
 
@@ -44,39 +99,43 @@
 <option value="booked">Booked</option>
 </select>
 
-<label>Exhibitor</label>
-<input id="boothName">
+<label>Exhibitor Name</label>
+<input id="boothName" type="text">
+
+<label>Contractor</label>
+<input id="contractorName" type="text">
 
 <button id="saveBoothBtn">Save</button>
-<button onclick="closeModal()">Cancel</button>
+
+<button onclick="closeModal()">Close</button>
 
 </div>
 
 </div>
 
-<!-- Firebase -->
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<!-- ================= FIREBASE CONFIG ================= -->
 
 <script>
+
 const firebaseConfig = {
-apiKey: "AIzaSyCymkS_gjS2xpTEdBtSKbCXE69hDr73UH8",
-authDomain: "expo-floorplan.firebaseapp.com",
-projectId: "expo-floorplan",
-storageBucket: "expo-floorplan.firebasestorage.app",
-messagingSenderId: "429071439083",
-appId: "1:429071439083:web:c0a8e5272d815c8e4e5aae"
+
+apiKey: "YOUR_API_KEY",
+authDomain: "YOUR_PROJECT.firebaseapp.com",
+projectId: "YOUR_PROJECT_ID",
+storageBucket: "YOUR_PROJECT.appspot.com",
+messagingSenderId: "YOUR_ID",
+appId: "YOUR_APP_ID"
+
 };
 
 firebase.initializeApp(firebaseConfig);
+
 </script>
 
-<!-- Excel -->
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- ================= MAIN SCRIPT ================= -->
 
 <script src="script.js"></script>
 
 </body>
 </html>
+```
