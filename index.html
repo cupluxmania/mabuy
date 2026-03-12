@@ -2,7 +2,6 @@
 <html>
 
 <head>
-
 <meta charset="UTF-8">
 <title>Expo Booth Manager</title>
 
@@ -12,77 +11,41 @@
 
 <body>
 
-<div id="topBar">
-
 <h1>Expo Booth Manager</h1>
-
-<div id="legend">
-
-<div class="legendItem">
-<span class="legendColor available"></span>
-Available
-</div>
-
-<div class="legendItem">
-<span class="legendColor booked"></span>
-Booked
-</div>
-
-</div>
 
 <div id="menu">
 
-<button id="zoomIn" class="menuBtn">Zoom +</button>
-<button id="zoomOut" class="menuBtn">Zoom -</button>
-
+<button id="zoomIn">Zoom +</button>
+<button id="zoomOut">Zoom -</button>
 <span id="zoomLevel">100%</span>
 
-<button id="filledBoothsBtn" class="menuBtn">Filled Booths</button>
-<button id="analyticsBtn" class="menuBtn">Analytics</button>
-
-<button id="exportBtn" class="menuBtn">Export Excel</button>
-<button id="uploadBtn" class="menuBtn">Import Excel</button>
+<button id="exportBtn">Export Excel</button>
+<button id="uploadBtn">Import Excel</button>
 
 <input type="file" id="importFile" hidden>
 
 </div>
 
-</div>
-
-<div id="content">
-
 <div id="floorContainer">
 <div id="floor"></div>
 </div>
 
-</div>
-
-<!-- Floating Panels -->
-
-<div id="filledPanel" class="panel"></div>
-
-<div id="analyticsPanel" class="panel"></div>
-
-<!-- Booth Modal -->
+<!-- Modal -->
 
 <div id="boothModal" class="modal">
 
-<div class="modal-content">
+<div class="modalContent">
 
 <h3>Booth <span id="boothId"></span></h3>
 
 <label>Status</label>
-
 <select id="boothStatus">
 <option value="available">Available</option>
 <option value="booked">Booked</option>
 </select>
 
-<label>Exhibitor Name</label>
+<label>Exhibitor</label>
 <input id="boothName">
-
-<label>Contractor</label>
-<input id="contractorName">
 
 <button id="saveBoothBtn">Save</button>
 <button onclick="closeModal()">Cancel</button>
@@ -97,20 +60,16 @@ Booked
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
-
 const firebaseConfig = {
-
-apiKey: "YOUR_API_KEY",
-authDomain: "YOUR_PROJECT.firebaseapp.com",
-projectId: "YOUR_PROJECT"
-
+apiKey:"YOUR_KEY",
+authDomain:"YOUR_PROJECT.firebaseapp.com",
+projectId:"YOUR_PROJECT"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 </script>
 
-<!-- Excel Library -->
+<!-- Excel -->
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
