@@ -29,11 +29,10 @@ function initFloor(){
     const header=document.createElement("div");
     header.className="hallHeader";
 
-    header.innerHTML=`
-      <span>${hall.name}</span>
-      <span class="bubble available">0</span>
-      <span class="bubble booked">0</span>
-    `;
+    header.innerHTML =
+      "<span>" + hall.name + "</span>" +
+      "<span class='bubble available'>0</span>" +
+      "<span class='bubble booked'>0</span>";
 
     const grid=document.createElement("div");
     grid.className="grid";
@@ -477,5 +476,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initFloor();
   updatePanels();
 });
+
 
 
