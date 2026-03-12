@@ -1,4 +1,3 @@
-```javascript
 // --- Firebase reference ---
 const db = firebase.firestore();
 
@@ -478,4 +477,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initFloor();
   updatePanels();
 });
+
 
