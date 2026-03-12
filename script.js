@@ -473,7 +473,9 @@ document.getElementById("importFile").addEventListener("change",(e)=>{
 });
 
 
-// --- Initialize ---
-initFloor();
-updatePanels();
-```
+// --- Initialize after page loads ---
+document.addEventListener("DOMContentLoaded", () => {
+  initFloor();
+  updatePanels();
+});
+
