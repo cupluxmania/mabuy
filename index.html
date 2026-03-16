@@ -3,6 +3,7 @@
 <head>
 <title>Hospital Expo Floorplan</title>
 <link rel="stylesheet" href="style.css">
+<script src="script.js" defer></script>
 </head>
 <body>
 
@@ -33,16 +34,12 @@
   <div class="modal-content">
     <h3>Booth Details</h3>
     <p>Booth ID: <span id="boothId"></span></p>
-    <label>Status:</label>
-    <input type="text" id="boothStatus" disabled>
-    <label>Exhibitor Name:</label>
-    <input type="text" id="boothName" disabled>
-    <label>Contractor Name:</label>
-    <input type="text" id="contractorName" disabled>
-    <button onclick="closeModal()" style="margin-top:15px; cursor:pointer;">Close</button>
+    <label>Status:</label> <input type="text" id="boothStatus" disabled>
+    <label>Exhibitor:</label> <input type="text" id="boothName" disabled>
+    <label>Contractor:</label> <input type="text" id="contractorName" disabled>
+    <button onclick="closeModal()" style="width:100%; padding:10px; cursor:pointer;">Close</button>
   </div>
 </div>
 
-<script src="script.js"></script>
 </body>
 </html>
