@@ -1,11 +1,18 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
+
 <head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Hospital Expo Floorplan</title>
 
 <link rel="stylesheet" href="style.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 
 <body>
@@ -13,17 +20,29 @@
 <h1>Int'l Hospital Expo @ICE BSD 2026</h1>
 
 <div id="legend">
-<div class="legendItem"><span class="legendColor available"></span> Available</div>
-<div class="legendItem"><span class="legendColor booked"></span> Booked</div>
+
+<div class="legendItem">
+<span class="legendColor available"></span>
+Available
+</div>
+
+<div class="legendItem">
+<span class="legendColor booked"></span>
+Booked
+</div>
+
 </div>
 
 <div id="menu">
 
 <button class="menuBtn" id="filledBoothsBtn">Filled Booths</button>
+
 <button class="menuBtn" id="analyticsBtn">Analytics</button>
+
 <button class="menuBtn" id="exportBtn">Export</button>
 
 <button class="menuBtn" id="zoomIn">Zoom In +</button>
+
 <button class="menuBtn" id="zoomOut">Zoom Out -</button>
 
 <span id="zoomLevel">100%</span>
@@ -31,10 +50,13 @@
 </div>
 
 <div id="filledPanel" class="panel"></div>
+
 <div id="analyticsPanel" class="panel"></div>
 
 <div id="floorContainer">
+
 <div id="floor"></div>
+
 </div>
 
 <div id="boothModal" class="modal">
@@ -45,27 +67,37 @@
 
 <p>Booth ID: <span id="boothId"></span></p>
 
-<label>Status</label>
+<label for="boothStatus">Status</label>
+
 <select id="boothStatus">
+
 <option value="available">Available</option>
 <option value="booked">Booked</option>
+
 </select>
 
-<label>Exhibitor Name</label>
+<label for="boothName">Exhibitor Name</label>
+
 <input type="text" id="boothName">
 
-<label>Contractor Name</label>
+<label for="contractorName">Contractor Name</label>
+
 <input type="text" id="contractorName">
 
-<div style="margin-top:10px;">
-<button id="saveBoothBtn">Save</button>
-<button onclick="closeModal()">Cancel</button>
+<div class="modalButtons">
+
+<button id="saveBoothBtn" type="button">Save</button>
+
+<button type="button" onclick="closeModal()">Cancel</button>
+
 </div>
 
 </div>
+
 </div>
 
 <script src="script.js"></script>
 
 </body>
+
 </html>
