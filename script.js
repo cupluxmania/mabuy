@@ -148,6 +148,8 @@ function updateHallStats(hallDiv) {
 // --- 3. MODAL & UI ---
 
 function openBoothPopup(booth, hallDiv) {
+  // --- TEMPORARILY DISABLED ---
+  return;
   currentBooth = { booth, hallDiv };
   document.getElementById("boothId").innerText = booth.dataset.id;
   document.getElementById("boothStatus").value = booth.dataset.status;
