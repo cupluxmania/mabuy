@@ -1,5 +1,5 @@
 // --- CONFIGURATION ---
-const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjA6wXxy4f38yVfF1KNrGb8YmRjl3cATZdYuxHuDHDKUEcWfsaz2uQvQMU0efkd0D_ng/exec";
+const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdigqvxiHOGSu_NdaYbv78csS_8Jtt0tzRGkGdNvvcxIbUJFZ1t9eOCu7DK_iDc9L8zw/exec";
 
 const halls = [
   {name:"Hall 5", start:5001, end:"5078A"},
@@ -14,17 +14,17 @@ const halls = [
 const floor = document.getElementById("floor");
 let currentBooth = null;
 
-// --- 1. Data Sync Functions ---
+// --- 1. DATA SYNC (GOOGLE SHEETS) ---
 
 async function loadFromGoogleSheets() {
+  console.log("Fetching latest data from Google Sheets...");
   try {
-    const response = await fetch(G_SCRIPT_URL);
+    const response = await fetch(`${G_SCRIPT_URL}?cmd=read`);
     const remoteData = await response.json();
     
-    // Create a map for fast lookup: { "5001": { status: "booked", ... } }
+    // Map headers: "boothid", "status", "exhibitor", "contractor"
     const dataMap = {};
     remoteData.forEach(row => {
-      // Logic maps to header names: "boothid", "status", "exhibitor", "contractor"
       dataMap[row.boothid] = row;
     });
 
@@ -40,34 +40,29 @@ async function loadFromGoogleSheets() {
       }
     });
 
-    // Refresh counters and panels
     document.querySelectorAll(".hall").forEach(updateHallStats);
     updatePanels();
-    console.log("Data synced from Google Sheets.");
+    console.log("Sync Complete.");
   } catch (err) {
-    console.error("Fetch error:", err);
+    console.error("Load Error:", err);
   }
 }
 
 async function saveToGoogleSheets(id, status, name, contractor) {
-  const payload = { id, status, name, contractor };
+  console.log(`Saving booth ${id} to Google Sheets...`);
+  // Use GET parameters to bypass CORS issues
+  const url = `${G_SCRIPT_URL}?cmd=update&id=${encodeURIComponent(id)}&status=${encodeURIComponent(status)}&name=${encodeURIComponent(name)}&contractor=${encodeURIComponent(contractor)}`;
   
   try {
-    // Note: Google Script POST requires 'no-cors' for simple browser requests
-    // but the update will still process on the server side.
-    await fetch(G_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      cache: "no-cache",
-      body: JSON.stringify(payload)
-    });
-    console.log(`Booth ${id} sync request sent.`);
+    // mode: 'no-cors' allows the request to fire even if Google doesn't send back a header
+    await fetch(url, { mode: 'no-cors' });
+    console.log("Update sent successfully.");
   } catch (err) {
-    console.error("Save error:", err);
+    console.error("Sync Error:", err);
   }
 }
 
-// --- 2. Floor Generation ---
+// --- 2. FLOOR GENERATION ---
 
 function initFloor() {
   floor.innerHTML = "";
@@ -102,7 +97,7 @@ function initFloor() {
     updateHallStats(hallDiv);
   });
   
-  // Load data immediately after building the UI
+  // Initial Load
   loadFromGoogleSheets();
 }
 
@@ -128,11 +123,13 @@ function updateHallStats(hallDiv) {
   let available = 0, booked = 0;
   booths.forEach(b => { if (b.dataset.status === "available") available++; else booked++; });
   const bubbles = hallDiv.querySelectorAll(".bubble");
-  bubbles[0].innerText = available;
-  bubbles[1].innerText = booked;
+  if(bubbles.length >= 2) {
+    bubbles[0].innerText = available;
+    bubbles[1].innerText = booked;
+  }
 }
 
-// --- 3. UI Interactions ---
+// --- 3. MODAL & UI ---
 
 function openBoothPopup(booth, hallDiv) {
   currentBooth = { booth, hallDiv };
@@ -156,22 +153,22 @@ document.getElementById("saveBoothBtn").addEventListener("click", async () => {
     return;
   }
 
-  // Update Local UI Immediately
+  // Update UI immediately for "Optimistic" feel
   currentBooth.booth.dataset.status = status;
   currentBooth.booth.dataset.name = name;
   currentBooth.booth.dataset.contractor = contractor;
   currentBooth.booth.className = "booth " + status;
   currentBooth.booth.dataset.tooltip = name || "";
 
-  // Sync to Google Sheets
-  await saveToGoogleSheets(id, status, name, contractor);
+  // Background Sync
+  saveToGoogleSheets(id, status, name, contractor);
 
   updateHallStats(currentBooth.hallDiv);
   closeModal();
   updatePanels();
 });
 
-// --- 4. Navigation & Zoom ---
+// --- 4. NAVIGATION & PANELS ---
 
 const floorContainer = document.getElementById("floorContainer");
 let isDown = false, startX, startY, scrollLeft, scrollTop;
@@ -204,8 +201,6 @@ function applyZoom() {
   floor.style.transform = `scale(${zoomLevel})`;
   document.getElementById("zoomLevel").innerText = `${Math.round(zoomLevel * 100)}%`;
 }
-
-// --- 5. Panels & Analytics ---
 
 function updatePanels() {
   const filledPanel = document.getElementById("filledPanel");
@@ -242,7 +237,7 @@ document.getElementById("analyticsBtn").addEventListener("click", () => {
   p.style.display = p.style.display === "block" ? "none" : "block";
 });
 
-// --- Initialize ---
+// --- INITIALIZE ---
 initFloor();
 
 // Auto-refresh from sheet every 60 seconds
