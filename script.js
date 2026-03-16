@@ -1,6 +1,7 @@
 // --- CONFIGURATION ---
-// Ensure this URL is from your latest "Anyone" deployment
-const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkbEsff17ddEP7fo4R0zQRPL_dEgXbsC0kQA4Tw_pnSFVjQJnDBKhY88OCQqyIL4-U1w/exec";
+// IMPORTANT: Every time you change your Apps Script, you MUST create a "New Version" deployment 
+// and update this URL if the ID changes.
+const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeXfwbFMaC8WH3th-aw5_PtMGTlz6UHMC5S5tWs9j1FW-G_Fszldy9QqiY5Zps-mFGQg/exec";
 
 const halls = [
   {name:"Hall 5", start:5001, end:"5078A"},
@@ -18,22 +19,25 @@ let currentBooth = null;
 // --- 1. DATA SYNC (GOOGLE SHEETS) ---
 
 async function loadFromGoogleSheets() {
-  console.log("Fetching latest data from Google Sheets...");
+  console.log("Attempting to sync with Google Sheets...");
   try {
-    // redirect: 'follow' is required to handle Google's internal macro redirection
-    const response = await fetch(`${G_SCRIPT_URL}?cmd=read`, {
+    // We add a timestamp to prevent the browser from caching a previous 'Failed' or 'Redirect' response
+    const cacheBuster = `&t=${new Date().getTime()}`;
+    const response = await fetch(`${G_SCRIPT_URL}?cmd=read${cacheBuster}`, {
       method: 'GET',
       mode: 'cors',
       redirect: 'follow'
     });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    // We read as text first, then parse. This is safer for Google Script redirects.
+    const text = await response.text();
+    const remoteData = JSON.parse(text);
     
-    if (!response.ok) throw new Error('Network response was not ok');
-    
-    const remoteData = await response.json();
-    
-    // Map headers: "boothid", "status", "exhibitor", "contractor"
     const dataMap = {};
     remoteData.forEach(row => {
+      // Ensure the key matches the spreadsheet header (lowercase, no spaces)
       dataMap[row.boothid] = row;
     });
 
@@ -51,26 +55,26 @@ async function loadFromGoogleSheets() {
 
     document.querySelectorAll(".hall").forEach(updateHallStats);
     updatePanels();
-    console.log("Data Sync Complete.");
+    console.log("Success: Floorplan updated from Google Sheets.");
   } catch (err) {
-    console.error("Load Error:", err);
+    console.error("Critical Sync Error:", err);
+    // If it fails, we keep the default UI so the user can still see the floorplan
   }
 }
 
 async function saveToGoogleSheets(id, status, name, contractor) {
-  console.log(`Saving booth ${id}...`);
-  // Using GET with query params to bypass complex CORS pre-flights
+  console.log(`Sending update for booth ${id}...`);
   const url = `${G_SCRIPT_URL}?cmd=update&id=${encodeURIComponent(id)}&status=${encodeURIComponent(status)}&name=${encodeURIComponent(name)}&contractor=${encodeURIComponent(contractor)}`;
   
   try {
-    // no-cors allows the request to be sent to Google even if the response is opaque
+    // no-cors is best for sending data to Google Scripts when you don't need to read the "Success" message
     await fetch(url, { 
         mode: 'no-cors',
         redirect: 'follow'
     });
-    console.log("Update request sent to Google Sheets.");
+    console.log("Update command sent.");
   } catch (err) {
-    console.error("Sync Error:", err);
+    console.error("Update failed to send:", err);
   }
 }
 
@@ -109,7 +113,7 @@ function initFloor() {
     updateHallStats(hallDiv);
   });
   
-  // Load data immediately after UI is built
+  // Fetch remote data after the grid is ready
   loadFromGoogleSheets();
 }
 
@@ -165,14 +169,14 @@ document.getElementById("saveBoothBtn").addEventListener("click", async () => {
     return;
   }
 
-  // Optimistic UI Update
+  // Update Local UI Immediately (Optimistic Update)
   currentBooth.booth.dataset.status = status;
   currentBooth.booth.dataset.name = name;
   currentBooth.booth.dataset.contractor = contractor;
   currentBooth.booth.className = "booth " + status;
   currentBooth.booth.dataset.tooltip = name || "";
 
-  // Background Sync to Sheet
+  // Update Google Sheet in background
   saveToGoogleSheets(id, status, name, contractor);
 
   updateHallStats(currentBooth.hallDiv);
@@ -180,7 +184,7 @@ document.getElementById("saveBoothBtn").addEventListener("click", async () => {
   updatePanels();
 });
 
-// --- 4. NAVIGATION & ZOOM ---
+// --- 4. NAVIGATION & PANELS ---
 
 const floorContainer = document.getElementById("floorContainer");
 let isDown = false, startX, startY, scrollLeft, scrollTop;
@@ -252,5 +256,5 @@ document.getElementById("analyticsBtn").addEventListener("click", () => {
 // --- INITIALIZE ---
 initFloor();
 
-// Auto-refresh from sheet every 60 seconds to keep multiple users in sync
-setInterval(loadFromGoogleSheets, 60000);
+// Background refresh every 2 minutes
+setInterval(loadFromGoogleSheets, 120000);
