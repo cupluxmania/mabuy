@@ -1,4 +1,6 @@
-// --- Data ---
+// --- CONFIGURATION ---
+const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjA6wXxy4f38yVfF1KNrGb8YmRjl3cATZdYuxHuDHDKUEcWfsaz2uQvQMU0efkd0D_ng/exec";
+
 const halls = [
   {name:"Hall 5", start:5001, end:"5078A"},
   {name:"Hall 6", start:6001, end:"6189A"},
@@ -12,14 +14,67 @@ const halls = [
 const floor = document.getElementById("floor");
 let currentBooth = null;
 
-// --- Generate floor ---
-function initFloor(){
+// --- 1. Data Sync Functions ---
+
+async function loadFromGoogleSheets() {
+  try {
+    const response = await fetch(G_SCRIPT_URL);
+    const remoteData = await response.json();
+    
+    // Create a map for fast lookup: { "5001": { status: "booked", ... } }
+    const dataMap = {};
+    remoteData.forEach(row => {
+      // Logic maps to header names: "boothid", "status", "exhibitor", "contractor"
+      dataMap[row.boothid] = row;
+    });
+
+    document.querySelectorAll(".booth").forEach(b => {
+      const id = b.dataset.id;
+      if (dataMap[id]) {
+        const row = dataMap[id];
+        b.dataset.status = row.status || "available";
+        b.dataset.name = row.exhibitor || "";
+        b.dataset.contractor = row.contractor || "";
+        b.className = "booth " + b.dataset.status;
+        b.dataset.tooltip = b.dataset.name || "";
+      }
+    });
+
+    // Refresh counters and panels
+    document.querySelectorAll(".hall").forEach(updateHallStats);
+    updatePanels();
+    console.log("Data synced from Google Sheets.");
+  } catch (err) {
+    console.error("Fetch error:", err);
+  }
+}
+
+async function saveToGoogleSheets(id, status, name, contractor) {
+  const payload = { id, status, name, contractor };
+  
+  try {
+    // Note: Google Script POST requires 'no-cors' for simple browser requests
+    // but the update will still process on the server side.
+    await fetch(G_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      cache: "no-cache",
+      body: JSON.stringify(payload)
+    });
+    console.log(`Booth ${id} sync request sent.`);
+  } catch (err) {
+    console.error("Save error:", err);
+  }
+}
+
+// --- 2. Floor Generation ---
+
+function initFloor() {
   floor.innerHTML = "";
   halls.forEach(hall => {
     const hallDiv = document.createElement("div");
     hallDiv.className = "hall";
 
-    // Hall header with bubble counters
     const header = document.createElement("div");
     header.className = "hallHeader";
     header.innerHTML = `<span>${hall.name}</span>
@@ -29,14 +84,14 @@ function initFloor(){
     const grid = document.createElement("div");
     grid.className = "grid";
 
-    if(hall.name === "Ambulance"){
-      for(let i=65;i<=90;i++) grid.appendChild(createBooth(String.fromCharCode(i), hallDiv));
+    if (hall.name === "Ambulance") {
+      for (let i = 65; i <= 90; i++) grid.appendChild(createBooth(String.fromCharCode(i), hallDiv));
     } else {
-      let start=parseInt(hall.start);
-      let endNum=parseInt(hall.end);
-      const endLetter = hall.end.toString().replace(/\d+/,"");
-      for(let i=start;i<=endNum;i++){
-        const boothID = i + (i===endNum? endLetter : "");
+      let start = parseInt(hall.start);
+      let endNum = parseInt(hall.end);
+      const endLetter = hall.end.toString().replace(/\d+/, "");
+      for (let i = start; i <= endNum; i++) {
+        const boothID = i + (i === endNum ? endLetter : "");
         grid.appendChild(createBooth(boothID, hallDiv));
       }
     }
@@ -46,12 +101,12 @@ function initFloor(){
     floor.appendChild(hallDiv);
     updateHallStats(hallDiv);
   });
-  loadSavedBooths();
-  updatePanels();
+  
+  // Load data immediately after building the UI
+  loadFromGoogleSheets();
 }
 
-// --- Booth creation ---
-function createBooth(id, hallDiv){
+function createBooth(id, hallDiv) {
   const booth = document.createElement("div");
   booth.className = "booth available";
   booth.innerText = id;
@@ -61,211 +116,134 @@ function createBooth(id, hallDiv){
   booth.dataset.id = id;
   booth.dataset.tooltip = "";
 
-  booth.addEventListener("click", (e)=>{
+  booth.addEventListener("click", (e) => {
     e.stopPropagation();
     openBoothPopup(booth, hallDiv);
   });
   return booth;
 }
 
-// --- Update hall stats (bubble counters) ---
-function updateHallStats(hallDiv){
+function updateHallStats(hallDiv) {
   const booths = hallDiv.querySelectorAll(".booth");
-  let available=0, booked=0;
-  booths.forEach(b => { if(b.dataset.status==="available") available++; else booked++; });
+  let available = 0, booked = 0;
+  booths.forEach(b => { if (b.dataset.status === "available") available++; else booked++; });
   const bubbles = hallDiv.querySelectorAll(".bubble");
   bubbles[0].innerText = available;
   bubbles[1].innerText = booked;
 }
 
-// --- Booth modal ---
-function openBoothPopup(booth, hallDiv){
-  currentBooth={booth,hallDiv};
-  document.getElementById("boothId").innerText=booth.innerText;
-  document.getElementById("boothStatus").value=booth.dataset.status;
-  document.getElementById("boothName").value=booth.dataset.name || "";
-  document.getElementById("contractorName").value=booth.dataset.contractor || "";
-  document.getElementById("boothModal").style.display="block";
+// --- 3. UI Interactions ---
+
+function openBoothPopup(booth, hallDiv) {
+  currentBooth = { booth, hallDiv };
+  document.getElementById("boothId").innerText = booth.dataset.id;
+  document.getElementById("boothStatus").value = booth.dataset.status;
+  document.getElementById("boothName").value = booth.dataset.name || "";
+  document.getElementById("contractorName").value = booth.dataset.contractor || "";
+  document.getElementById("boothModal").style.display = "block";
 }
 
-function closeModal(){ document.getElementById("boothModal").style.display="none"; }
+function closeModal() { document.getElementById("boothModal").style.display = "none"; }
 
-// --- Save booth ---
-document.getElementById("saveBoothBtn").addEventListener("click", ()=>{
+document.getElementById("saveBoothBtn").addEventListener("click", async () => {
   const status = document.getElementById("boothStatus").value;
   const name = document.getElementById("boothName").value.trim();
   const contractor = document.getElementById("contractorName").value.trim();
+  const id = currentBooth.booth.dataset.id;
 
-  if(status==="booked" && name.length<4){
-    alert("Exhibitor name must be at least 4 characters when booking!");
+  if (status === "booked" && name.length < 4) {
+    alert("Exhibitor name must be at least 4 characters!");
     return;
   }
 
+  // Update Local UI Immediately
   currentBooth.booth.dataset.status = status;
   currentBooth.booth.dataset.name = name;
   currentBooth.booth.dataset.contractor = contractor;
-  currentBooth.booth.className = "booth "+status;
+  currentBooth.booth.className = "booth " + status;
   currentBooth.booth.dataset.tooltip = name || "";
-  saveBoothData(currentBooth.booth);
+
+  // Sync to Google Sheets
+  await saveToGoogleSheets(id, status, name, contractor);
+
   updateHallStats(currentBooth.hallDiv);
   closeModal();
   updatePanels();
 });
 
-// --- LocalStorage ---
-function saveBoothData(booth){
-  const saved = JSON.parse(localStorage.getItem("floorData") || "{}");
-  saved[booth.dataset.id] = {status: booth.dataset.status, name: booth.dataset.name, contractor: booth.dataset.contractor || ""};
-  localStorage.setItem("floorData", JSON.stringify(saved));
-}
+// --- 4. Navigation & Zoom ---
 
-function loadSavedBooths(){
-  const saved = JSON.parse(localStorage.getItem("floorData") || "{}");
-  document.querySelectorAll(".hall").forEach(hallDiv=>{
-    hallDiv.querySelectorAll(".booth").forEach(b=>{
-      const id=b.dataset.id;
-      if(saved[id]){
-        b.dataset.status=saved[id].status;
-        b.dataset.name=saved[id].name;
-        b.dataset.contractor=saved[id].contractor || "";
-        b.className="booth "+saved[id].status;
-        b.dataset.tooltip=saved[id].name || "";
-      }
-    });
-    updateHallStats(hallDiv);
-  });
-}
+const floorContainer = document.getElementById("floorContainer");
+let isDown = false, startX, startY, scrollLeft, scrollTop;
 
-// --- Drag floor ---
-const floorContainer=document.getElementById("floorContainer");
-let isDown=false, startX, startY, scrollLeft, scrollTop;
-
-floorContainer.addEventListener("mousedown",(e)=>{
-  isDown=true;
+floorContainer.addEventListener("mousedown", (e) => {
+  isDown = true;
   floorContainer.classList.add("active");
-  startX=e.pageX-floorContainer.offsetLeft;
-  startY=e.pageY-floorContainer.offsetTop;
-  scrollLeft=floorContainer.scrollLeft;
-  scrollTop=floorContainer.scrollTop;
+  startX = e.pageX - floorContainer.offsetLeft;
+  startY = e.pageY - floorContainer.offsetTop;
+  scrollLeft = floorContainer.scrollLeft;
+  scrollTop = floorContainer.scrollTop;
 });
 
-floorContainer.addEventListener("mouseleave",()=>{ isDown=false; floorContainer.classList.remove("active"); });
-floorContainer.addEventListener("mouseup",()=>{ isDown=false; floorContainer.classList.remove("active"); });
-floorContainer.addEventListener("mousemove",(e)=>{
-  if(!isDown) return;
+floorContainer.addEventListener("mouseleave", () => { isDown = false; });
+floorContainer.addEventListener("mouseup", () => { isDown = false; });
+floorContainer.addEventListener("mousemove", (e) => {
+  if (!isDown) return;
   e.preventDefault();
-  const x=e.pageX-floorContainer.offsetLeft;
-  const y=e.pageY-floorContainer.offsetTop;
-  floorContainer.scrollLeft=scrollLeft-(x-startX)*2;
-  floorContainer.scrollTop=scrollTop-(y-startY)*2;
+  const x = e.pageX - floorContainer.offsetLeft;
+  const y = e.pageY - floorContainer.offsetTop;
+  floorContainer.scrollLeft = scrollLeft - (x - startX) * 2;
+  floorContainer.scrollTop = scrollTop - (y - startY) * 2;
 });
 
-// --- Zoom ---
-let zoomLevel=1;
-const zoomInBtn=document.getElementById("zoomIn");
-const zoomOutBtn=document.getElementById("zoomOut");
-const zoomDisplay=document.getElementById("zoomLevel");
+let zoomLevel = 1;
+document.getElementById("zoomIn").addEventListener("click", () => { zoomLevel += 0.1; applyZoom(); });
+document.getElementById("zoomOut").addEventListener("click", () => { zoomLevel = Math.max(0.1, zoomLevel - 0.1); applyZoom(); });
 
-zoomInBtn.addEventListener("click",()=>{ zoomLevel+=0.1; applyZoom(); });
-zoomOutBtn.addEventListener("click",()=>{ zoomLevel=Math.max(0.1,zoomLevel-0.1); applyZoom(); });
-
-function applyZoom(){
-  floor.style.transform=`scale(${zoomLevel})`;
-  zoomDisplay.innerText=`${Math.round(zoomLevel*100)}%`;
+function applyZoom() {
+  floor.style.transform = `scale(${zoomLevel})`;
+  document.getElementById("zoomLevel").innerText = `${Math.round(zoomLevel * 100)}%`;
 }
 
-// --- Panels ---
-const filledPanel = document.getElementById("filledPanel");
-const analyticsPanel = document.getElementById("analyticsPanel");
+// --- 5. Panels & Analytics ---
 
-function updatePanels(){
-  const saved = JSON.parse(localStorage.getItem("floorData") || "{}");
-  // Filled booths
-  filledPanel.innerHTML = "";
-  for(const id in saved){
-    if(saved[id].status==="booked"){
-      const div=document.createElement("div");
-      div.innerText=`${id}: ${saved[id].name} (${saved[id].contractor || '-'})`;
-      div.addEventListener("click", ()=>{
-        const booth=document.querySelector(`.booth[data-id='${id}']`);
-        if(booth){
-          booth.scrollIntoView({behavior:"smooth", block:"center", inline:"center"});
-          booth.classList.add("selectedBooth");
-          setTimeout(()=>booth.classList.remove("selectedBooth"),1500);
-        }
-      });
+function updatePanels() {
+  const filledPanel = document.getElementById("filledPanel");
+  const analyticsPanel = document.getElementById("analyticsPanel");
+  
+  filledPanel.innerHTML = "<h4>Filled Booths</h4>";
+  let total = 0, booked = 0;
+
+  document.querySelectorAll(".booth").forEach(b => {
+    total++;
+    if (b.dataset.status === "booked") {
+      booked++;
+      const div = document.createElement("div");
+      div.innerText = `${b.dataset.id}: ${b.dataset.name}`;
+      div.onclick = () => {
+        b.scrollIntoView({ behavior: "smooth", block: "center" });
+        b.classList.add("selectedBooth");
+        setTimeout(() => b.classList.remove("selectedBooth"), 1500);
+      };
       filledPanel.appendChild(div);
     }
-  }
-
-  // Analytics
-  let total=0, booked=0, available=0;
-  document.querySelectorAll(".booth").forEach(b=>{
-    total++;
-    if(b.dataset.status==="booked") booked++; else available++;
   });
-  analyticsPanel.innerHTML=`Total: ${total}<br>Booked: ${booked}<br>Available: ${available}`;
+
+  analyticsPanel.innerHTML = `<h4>Analytics</h4>Total: ${total}<br>Booked: ${booked}<br>Available: ${total - booked}`;
 }
 
-// Toggle panels
-document.getElementById("filledBoothsBtn").addEventListener("click", ()=>{
-  filledPanel.style.display=filledPanel.style.display==="block"?"none":"block";
-  analyticsPanel.style.display="none";
+document.getElementById("filledBoothsBtn").addEventListener("click", () => {
+  const p = document.getElementById("filledPanel");
+  p.style.display = p.style.display === "block" ? "none" : "block";
 });
 
-document.getElementById("analyticsBtn").addEventListener("click", ()=>{
-  analyticsPanel.style.display=analyticsPanel.style.display==="block"?"none":"block";
-  filledPanel.style.display="none";
-});
-
-// Close panels on click outside
-document.addEventListener("click", (e)=>{
-  if(!filledPanel.contains(e.target) && e.target.id!=="filledBoothsBtn") filledPanel.style.display="none";
-  if(!analyticsPanel.contains(e.target) && e.target.id!=="analyticsBtn") analyticsPanel.style.display="none";
-});
-
-// --- Export XLSX ---
-document.getElementById("exportBtn").addEventListener("click", ()=>{
-  const saved = JSON.parse(localStorage.getItem("floorData") || "{}");
-  const wb = XLSX.utils.book_new();
-  const ws_data = [["Booth ID","Status","Exhibitor","Contractor"]];
-  for(const id in saved){
-    ws_data.push([id, saved[id].status, saved[id].name, saved[id].contractor]);
-  }
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb, ws, "Booths");
-  XLSX.writeFile(wb,"ExpoBooths.xlsx");
-});
-
-// --- Import XLSX ---
-document.getElementById("uploadBtn").addEventListener("click", ()=>{ document.getElementById("importFile").click(); });
-
-document.getElementById("importFile").addEventListener("change", (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (evt)=>{
-    const data = new Uint8Array(evt.target.result);
-    const wb = XLSX.read(data, {type:'array'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(ws,{header:["id","status","name","contractor"], defval:""});
-    json.slice(1).forEach(row=>{
-      const booth = document.querySelector(`.booth[data-id='${row.id}']`);
-      if(booth){
-        booth.dataset.status=row.status;
-        booth.dataset.name=row.name;
-        booth.dataset.contractor=row.contractor;
-        booth.className="booth "+row.status;
-        booth.dataset.tooltip=row.name;
-        saveBoothData(booth);
-        updateHallStats(booth.closest(".hall"));
-      }
-    });
-    updatePanels();
-  };
-  reader.readAsArrayBuffer(file);
+document.getElementById("analyticsBtn").addEventListener("click", () => {
+  const p = document.getElementById("analyticsPanel");
+  p.style.display = p.style.display === "block" ? "none" : "block";
 });
 
 // --- Initialize ---
 initFloor();
-updatePanels();
+
+// Auto-refresh from sheet every 60 seconds
+setInterval(loadFromGoogleSheets, 60000);
