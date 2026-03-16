@@ -1,17 +1,18 @@
-const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTOcl25DHFV_jFSifudNzweglzM3SoGGfwgRZ-ENWd7dsfaqGUkUy08iBQLyGjY5Fj2RUMsrpiQ204K/pub?gid=0&single=true&output=csv";
+const SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTOcl25DHFV_jFSifudNzweglzM3SoGGfwgRZ-ENWd7dsfaqGUkUy08iBQLyGjY5Fj2RUMsrpiQ204K/pub?gid=0&single=true&output=csv";
 
-const halls = [
-{ name:"Hall 5", start:5001, end:"5078A" },
-{ name:"Hall 6", start:6001, end:"6189A" },
-{ name:"Hall 7", start:7001, end:"7185A" },
-{ name:"Hall 8", start:8001, end:"8181A" },
-{ name:"Hall 9", start:9001, end:"9191A" },
-{ name:"Hall 10", start:1001, end:"1151A" },
-{ name:"Ambulance", start:"A", end:"Z" }
+const API_URL="https://script.google.com/macros/s/AKfycbxmvCfcd1iYeXqtNik0EUZTWE1ThehIY-q0J7og8_DXmwOY4VV9PmU9vQKbGRPqSVSB_g/exec";
+
+const halls=[
+{name:"Hall 5",start:5001,end:"5078A"},
+{name:"Hall 6",start:6001,end:"6189A"},
+{name:"Hall 7",start:7001,end:"7185A"},
+{name:"Hall 8",start:8001,end:"8181A"},
+{name:"Hall 9",start:9001,end:"9191A"},
+{name:"Hall 10",start:1001,end:"1151A"},
+{name:"Ambulance",start:"A",end:"Z"}
 ];
 
-const floor = document.getElementById("floor");
+const floor=document.getElementById("floor");
 
 let currentBooth=null;
 
@@ -27,11 +28,9 @@ hallDiv.className="hall";
 const header=document.createElement("div");
 header.className="hallHeader";
 
-header.innerHTML=`
-<span>${hall.name}</span>
+header.innerHTML=`<span>${hall.name}</span>
 <span class="bubble available">0</span>
-<span class="bubble booked">0</span>
-`;
+<span class="bubble booked">0</span>`;
 
 const grid=document.createElement("div");
 grid.className="grid";
@@ -52,7 +51,7 @@ let letter=hall.end.toString().replace(/\d+/,"");
 
 for(let i=start;i<=end;i++){
 
-let id=i+(i===end?letter:"");
+const id=i+(i===end?letter:"");
 
 grid.appendChild(createBooth(id,hallDiv));
 
@@ -62,7 +61,6 @@ grid.appendChild(createBooth(id,hallDiv));
 
 hallDiv.appendChild(header);
 hallDiv.appendChild(grid);
-
 floor.appendChild(hallDiv);
 
 });
@@ -74,7 +72,6 @@ function createBooth(id,hallDiv){
 const booth=document.createElement("div");
 
 booth.className="booth available";
-
 booth.innerText=id;
 
 booth.dataset.id=id;
@@ -85,7 +82,6 @@ booth.dataset.contractor="";
 booth.addEventListener("click",(e)=>{
 
 e.stopPropagation();
-
 openBoothPopup(booth,hallDiv);
 
 });
@@ -120,8 +116,6 @@ booth.dataset.contractor=contractor;
 
 booth.className="booth "+status;
 
-booth.dataset.tooltip=name;
-
 }
 
 });
@@ -130,6 +124,50 @@ updateHallStatsAll();
 updatePanels();
 
 }
+
+async function saveToGoogleSheet(data){
+
+await fetch(API_URL,{
+method:"POST",
+body:JSON.stringify(data)
+});
+
+}
+
+function openBoothPopup(booth,hall){
+
+currentBooth={booth,hall};
+
+document.getElementById("boothId").innerText=booth.dataset.id;
+document.getElementById("boothStatus").value=booth.dataset.status;
+document.getElementById("boothName").value=booth.dataset.name;
+document.getElementById("contractorName").value=booth.dataset.contractor;
+
+document.getElementById("boothModal").style.display="block";
+
+}
+
+function closeModal(){
+
+document.getElementById("boothModal").style.display="none";
+
+}
+
+document.getElementById("saveBoothBtn").addEventListener("click",async()=>{
+
+const status=document.getElementById("boothStatus").value;
+const name=document.getElementById("boothName").value;
+const contractor=document.getElementById("contractorName").value;
+
+const id=currentBooth.booth.dataset.id;
+
+await saveToGoogleSheet({id,status,name,contractor});
+
+await loadFromGoogleSheet();
+
+closeModal();
+
+});
 
 function updateHallStats(hall){
 
@@ -157,44 +195,6 @@ function updateHallStatsAll(){
 document.querySelectorAll(".hall").forEach(h=>updateHallStats(h));
 
 }
-
-function openBoothPopup(booth,hall){
-
-currentBooth={booth,hall};
-
-document.getElementById("boothId").innerText=booth.dataset.id;
-
-document.getElementById("boothStatus").value=booth.dataset.status;
-document.getElementById("boothName").value=booth.dataset.name;
-document.getElementById("contractorName").value=booth.dataset.contractor;
-
-document.getElementById("boothModal").style.display="block";
-
-}
-
-function closeModal(){
-
-document.getElementById("boothModal").style.display="none";
-
-}
-
-document.getElementById("saveBoothBtn").addEventListener("click",()=>{
-
-const status=document.getElementById("boothStatus").value;
-const name=document.getElementById("boothName").value;
-const contractor=document.getElementById("contractorName").value;
-
-currentBooth.booth.dataset.status=status;
-currentBooth.booth.dataset.name=name;
-currentBooth.booth.dataset.contractor=contractor;
-
-currentBooth.booth.className="booth "+status;
-
-updateHallStats(currentBooth.hall);
-
-closeModal();
-
-});
 
 const filledPanel=document.getElementById("filledPanel");
 const analyticsPanel=document.getElementById("analyticsPanel");
@@ -228,42 +228,74 @@ else available++;
 
 });
 
-analyticsPanel.innerHTML=`
-Total: ${total}<br>
-Booked: ${booked}<br>
-Available: ${available}
-`;
+analyticsPanel.innerHTML=`Total: ${total}<br>Booked: ${booked}<br>Available: ${available}`;
 
 }
+
+document.getElementById("filledBoothsBtn").onclick=()=>{
+
+filledPanel.style.display=filledPanel.style.display==="block"?"none":"block";
+analyticsPanel.style.display="none";
+
+};
+
+document.getElementById("analyticsBtn").onclick=()=>{
+
+analyticsPanel.style.display=analyticsPanel.style.display==="block"?"none":"block";
+filledPanel.style.display="none";
+
+};
 
 let zoomLevel=1;
 
 const zoomIn=document.getElementById("zoomIn");
 const zoomOut=document.getElementById("zoomOut");
-const zoomLevelText=document.getElementById("zoomLevel");
+const zoomText=document.getElementById("zoomLevel");
 
-zoomIn.onclick=()=>{
-
-zoomLevel+=0.1;
-applyZoom();
-
-};
-
-zoomOut.onclick=()=>{
-
-zoomLevel=Math.max(0.2,zoomLevel-0.1);
-applyZoom();
-
-};
+zoomIn.onclick=()=>{zoomLevel+=0.1;applyZoom();};
+zoomOut.onclick=()=>{zoomLevel=Math.max(0.2,zoomLevel-0.1);applyZoom();};
 
 function applyZoom(){
 
 floor.style.transform=`scale(${zoomLevel})`;
-zoomLevelText.innerText=Math.round(zoomLevel*100)+"%";
+zoomText.innerText=Math.round(zoomLevel*100)+"%";
 
 }
 
-document.getElementById("exportBtn").addEventListener("click",()=>{
+const floorContainer=document.getElementById("floorContainer");
+
+let isDown=false,startX,startY,scrollLeft,scrollTop;
+
+floorContainer.addEventListener("mousedown",(e)=>{
+
+isDown=true;
+
+startX=e.pageX-floorContainer.offsetLeft;
+startY=e.pageY-floorContainer.offsetTop;
+
+scrollLeft=floorContainer.scrollLeft;
+scrollTop=floorContainer.scrollTop;
+
+});
+
+floorContainer.addEventListener("mouseup",()=>isDown=false);
+floorContainer.addEventListener("mouseleave",()=>isDown=false);
+
+floorContainer.addEventListener("mousemove",(e)=>{
+
+if(!isDown) return;
+
+e.preventDefault();
+
+const x=e.pageX-floorContainer.offsetLeft;
+const y=e.pageY-floorContainer.offsetTop;
+
+floorContainer.scrollLeft=scrollLeft-(x-startX);
+floorContainer.scrollTop=scrollTop-(y-startY);
+
+});
+
+document.getElementById("exportBtn").onclick=()=>{
 
 const wb=XLSX.utils.book_new();
 
@@ -271,12 +303,7 @@ const ws_data=[["Booth","Status","Name","Contractor"]];
 
 document.querySelectorAll(".booth").forEach(b=>{
 
-ws_data.push([
-b.dataset.id,
-b.dataset.status,
-b.dataset.name,
-b.dataset.contractor
-]);
+ws_data.push([b.dataset.id,b.dataset.status,b.dataset.name,b.dataset.contractor]);
 
 });
 
@@ -286,7 +313,7 @@ XLSX.utils.book_append_sheet(wb,ws,"Booths");
 
 XLSX.writeFile(wb,"ExpoBooths.xlsx");
 
-});
+};
 
 initFloor();
 
