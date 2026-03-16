@@ -1,6 +1,6 @@
 // --- CONFIGURATION ---
 // Ensure this URL is from your latest "Anyone" deployment
-const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdigqvxiHOGSu_NdaYbv78csS_8Jtt0tzRGkGdNvvcxIbUJFZ1t9eOCu7DK_iDc9L8zw/exec";
+const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkbEsff17ddEP7fo4R0zQRPL_dEgXbsC0kQA4Tw_pnSFVjQJnDBKhY88OCQqyIL4-U1w/exec";
 
 const halls = [
   {name:"Hall 5", start:5001, end:"5078A"},
