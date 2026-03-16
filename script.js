@@ -11,7 +11,6 @@ const analyticsPanel=document.getElementById("analyticsPanel")
 const modal=document.getElementById("boothModal")
 
 let selectedBooth=null
-
 let zoom=1
 
 function createBooth(id){
@@ -19,7 +18,6 @@ function createBooth(id){
 const div=document.createElement("div")
 
 div.className="booth available"
-
 div.innerText=id
 
 div.dataset.id=id
@@ -28,23 +26,17 @@ div.dataset.name=""
 div.dataset.contractor=""
 
 div.onclick=(e)=>{
-
 e.stopPropagation()
-
 openModal(div)
-
 }
 
 return div
-
 }
 
 function generateFloor(){
 
 for(let i=5001;i<=5078;i++){
-
 floor.appendChild(createBooth(i))
-
 }
 
 }
@@ -52,7 +44,6 @@ floor.appendChild(createBooth(i))
 async function loadSheet(){
 
 const res=await fetch(CSV_URL)
-
 const text=await res.text()
 
 const rows=text.split("\n").slice(1)
@@ -96,29 +87,26 @@ function openModal(booth){
 
 selectedBooth=booth
 
-document.getElementById("modalBoothId").innerText=booth.dataset.id
-
-document.getElementById("modalStatus").value=booth.dataset.status
-document.getElementById("modalName").value=booth.dataset.name
-document.getElementById("modalContractor").value=booth.dataset.contractor
+document.getElementById("boothId").innerText=booth.dataset.id
+document.getElementById("boothStatus").value=booth.dataset.status
+document.getElementById("boothName").value=booth.dataset.name
+document.getElementById("contractorName").value=booth.dataset.contractor
 
 modal.style.display="flex"
 
 }
 
 function closeModal(){
-
 modal.style.display="none"
-
 }
 
-document.getElementById("saveBtn").onclick=async()=>{
+document.getElementById("saveBoothBtn").onclick=async()=>{
 
 const id=selectedBooth.dataset.id
 
-const status=document.getElementById("modalStatus").value
-const name=document.getElementById("modalName").value
-const contractor=document.getElementById("modalContractor").value
+const status=document.getElementById("boothStatus").value
+const name=document.getElementById("boothName").value
+const contractor=document.getElementById("contractorName").value
 
 await saveBooth({id,status,name,contractor})
 
@@ -127,8 +115,6 @@ await loadSheet()
 closeModal()
 
 }
-
-document.getElementById("cancelBtn").onclick=closeModal
 
 function updatePanels(){
 
@@ -150,9 +136,7 @@ const item=document.createElement("div")
 item.innerText=b.dataset.id+" "+b.dataset.name
 
 item.onclick=()=>{
-
 b.scrollIntoView({behavior:"smooth",block:"center"})
-
 }
 
 filledPanel.appendChild(item)
@@ -169,7 +153,7 @@ analyticsPanel.innerHTML=
 
 }
 
-document.getElementById("filledBtn").onclick=()=>{
+document.getElementById("filledBoothsBtn").onclick=()=>{
 
 filledPanel.style.display="block"
 analyticsPanel.style.display="none"
@@ -206,7 +190,6 @@ b.dataset.contractor
 })
 
 const wb=XLSX.utils.book_new()
-
 const ws=XLSX.utils.aoa_to_sheet(rows)
 
 XLSX.utils.book_append_sheet(wb,ws,"Booths")
@@ -216,24 +199,20 @@ XLSX.writeFile(wb,"booths.xlsx")
 }
 
 document.getElementById("zoomIn").onclick=()=>{
-
 zoom+=0.1
 applyZoom()
-
 }
 
 document.getElementById("zoomOut").onclick=()=>{
-
 zoom-=0.1
 applyZoom()
-
 }
 
 function applyZoom(){
 
 floor.style.transform=`scale(${zoom})`
 
-document.getElementById("zoomText").innerText=Math.round(zoom*100)+"%"
+document.getElementById("zoomLevel").innerText=Math.round(zoom*100)+"%"
 
 }
 
@@ -268,7 +247,6 @@ floorContainer.scrollTop=scrollY-(e.pageY-startY)
 }
 
 generateFloor()
-
 loadSheet()
 
 setInterval(loadSheet,15000)
