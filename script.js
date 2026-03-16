@@ -1,4 +1,5 @@
 // --- CONFIGURATION ---
+// Ensure this URL is from your latest "Anyone" deployment
 const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdigqvxiHOGSu_NdaYbv78csS_8Jtt0tzRGkGdNvvcxIbUJFZ1t9eOCu7DK_iDc9L8zw/exec";
 
 const halls = [
@@ -19,7 +20,15 @@ let currentBooth = null;
 async function loadFromGoogleSheets() {
   console.log("Fetching latest data from Google Sheets...");
   try {
-    const response = await fetch(`${G_SCRIPT_URL}?cmd=read`);
+    // redirect: 'follow' is required to handle Google's internal macro redirection
+    const response = await fetch(`${G_SCRIPT_URL}?cmd=read`, {
+      method: 'GET',
+      mode: 'cors',
+      redirect: 'follow'
+    });
+    
+    if (!response.ok) throw new Error('Network response was not ok');
+    
     const remoteData = await response.json();
     
     // Map headers: "boothid", "status", "exhibitor", "contractor"
@@ -42,21 +51,24 @@ async function loadFromGoogleSheets() {
 
     document.querySelectorAll(".hall").forEach(updateHallStats);
     updatePanels();
-    console.log("Sync Complete.");
+    console.log("Data Sync Complete.");
   } catch (err) {
     console.error("Load Error:", err);
   }
 }
 
 async function saveToGoogleSheets(id, status, name, contractor) {
-  console.log(`Saving booth ${id} to Google Sheets...`);
-  // Use GET parameters to bypass CORS issues
+  console.log(`Saving booth ${id}...`);
+  // Using GET with query params to bypass complex CORS pre-flights
   const url = `${G_SCRIPT_URL}?cmd=update&id=${encodeURIComponent(id)}&status=${encodeURIComponent(status)}&name=${encodeURIComponent(name)}&contractor=${encodeURIComponent(contractor)}`;
   
   try {
-    // mode: 'no-cors' allows the request to fire even if Google doesn't send back a header
-    await fetch(url, { mode: 'no-cors' });
-    console.log("Update sent successfully.");
+    // no-cors allows the request to be sent to Google even if the response is opaque
+    await fetch(url, { 
+        mode: 'no-cors',
+        redirect: 'follow'
+    });
+    console.log("Update request sent to Google Sheets.");
   } catch (err) {
     console.error("Sync Error:", err);
   }
@@ -97,7 +109,7 @@ function initFloor() {
     updateHallStats(hallDiv);
   });
   
-  // Initial Load
+  // Load data immediately after UI is built
   loadFromGoogleSheets();
 }
 
@@ -153,14 +165,14 @@ document.getElementById("saveBoothBtn").addEventListener("click", async () => {
     return;
   }
 
-  // Update UI immediately for "Optimistic" feel
+  // Optimistic UI Update
   currentBooth.booth.dataset.status = status;
   currentBooth.booth.dataset.name = name;
   currentBooth.booth.dataset.contractor = contractor;
   currentBooth.booth.className = "booth " + status;
   currentBooth.booth.dataset.tooltip = name || "";
 
-  // Background Sync
+  // Background Sync to Sheet
   saveToGoogleSheets(id, status, name, contractor);
 
   updateHallStats(currentBooth.hallDiv);
@@ -168,7 +180,7 @@ document.getElementById("saveBoothBtn").addEventListener("click", async () => {
   updatePanels();
 });
 
-// --- 4. NAVIGATION & PANELS ---
+// --- 4. NAVIGATION & ZOOM ---
 
 const floorContainer = document.getElementById("floorContainer");
 let isDown = false, startX, startY, scrollLeft, scrollTop;
@@ -240,5 +252,5 @@ document.getElementById("analyticsBtn").addEventListener("click", () => {
 // --- INITIALIZE ---
 initFloor();
 
-// Auto-refresh from sheet every 60 seconds
+// Auto-refresh from sheet every 60 seconds to keep multiple users in sync
 setInterval(loadFromGoogleSheets, 60000);
