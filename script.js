@@ -43,41 +43,61 @@ function renderFloor() {
         const grid = document.createElement("div");
         grid.className = "grid";
 
-        for (let i = hall.start; i <= hall.end; i++) {
-            const b = document.createElement("div");
-            b.className = "booth available";
-            b.innerText = i;
-            b.dataset.id = i;
-            b.dataset.tooltip = "Available";
-
-            const d = allData.find(x => String(x.boothid) === String(i));
-            if (d) {
-                let name = (d.exhibitor || "").trim();
-                let status = (d.status || "available").toLowerCase();
-                if (name.length > 0 && name === name.toLowerCase()) status = "plotting";
-                
-                b.className = "booth " + status;
-                b.dataset.name = name;
-                b.dataset.tooltip = name || "Booked";
+        if (hall.name === "Ambulance") {
+            for (let i = 65; i <= 90; i++) {
+                grid.appendChild(createBooth(String.fromCharCode(i)));
             }
+        } else {
+            let startNum = parseInt(hall.start);
+            let endNum = parseInt(hall.end);
+            let suffix = String(hall.end).replace(/[0-9]/g, '');
 
-            b.onclick = (e) => {
-                e.stopPropagation();
-                panel.classList.remove("hidden");
-                panelContent.innerHTML = `<b>Booth:</b> ${i}<br><b>Status:</b> ${b.classList.contains('available') ? 'Available' : 'Filled'}<br><b>Exhibitor:</b> ${b.dataset.name || "-"}`;
-            };
-            grid.appendChild(b);
+            for (let i = startNum; i <= endNum; i++) {
+                let finalId = (i === endNum && suffix) ? i + suffix : String(i);
+                grid.appendChild(createBooth(finalId));
+            }
         }
         hallDiv.appendChild(grid);
         floor.appendChild(hallDiv);
     });
 }
 
-/* SEARCH & AUTO-MOVE */
+function createBooth(id) {
+    const b = document.createElement("div");
+    b.className = "booth available";
+    b.innerText = id;
+    b.dataset.id = id;
+    b.dataset.tooltip = "Available";
+
+    const d = allData.find(x => String(x.boothid).toLowerCase() === String(id).toLowerCase());
+    if (d) {
+        let name = (d.exhibitor || "").trim();
+        let status = (d.status || "available").toLowerCase();
+        // Plotting logic: name is all lowercase
+        if (name.length > 0 && name === name.toLowerCase()) status = "plotting";
+        
+        b.className = "booth " + status;
+        b.dataset.name = name;
+        b.dataset.tooltip = name || "Booked";
+    }
+
+    b.onclick = (e) => {
+        e.stopPropagation();
+        panel.classList.remove("hidden");
+        panelContent.innerHTML = `
+            <b>Booth:</b> ${id}<br>
+            <b>Status:</b> ${b.className.replace('booth ', '').toUpperCase()}<br>
+            <b>Exhibitor:</b> ${b.dataset.name || "-"}
+        `;
+    };
+    return b;
+}
+
+/* SEARCH LOGIC */
 searchBox.addEventListener("input", () => {
     const val = searchBox.value.toLowerCase();
     if (!val) { suggestions.style.display = "none"; return; }
-    const filtered = allData.filter(x => x.status !== "available" && (String(x.boothid).includes(val) || x.exhibitor.toLowerCase().includes(val)));
+    const filtered = allData.filter(x => x.status !== "available" && (String(x.boothid).toLowerCase().includes(val) || x.exhibitor.toLowerCase().includes(val)));
     showSuggestions(filtered);
 });
 
@@ -98,7 +118,6 @@ function showSuggestions(list) {
         div.onclick = () => {
             const el = document.querySelector(`[data-id='${x.boothid}']`);
             if (el) {
-                // MOVE FLOOR TO BOOTH
                 el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
                 el.classList.add("highlight");
                 setTimeout(() => el.classList.remove("highlight"), 2000);
@@ -117,7 +136,7 @@ function applyZoom() {
     document.getElementById("zoomLevel").innerText = Math.round(zoomLevel * 100) + "%";
 }
 
-/* CLICK ANYWHERE TO CLOSE PANEL */
+/* CLICK ANYWHERE TO CLOSE PANELS */
 document.addEventListener("click", (e) => {
     if (!panel.contains(e.target) && !e.target.classList.contains('booth')) {
         panel.classList.add("hidden");
@@ -130,9 +149,31 @@ document.addEventListener("click", (e) => {
 
 /* DRAG TO SCROLL */
 let isDown = false, startX, startY, scrollLeft, scrollTop;
-container.addEventListener("mousedown", (e) => { isDown = true; startX = e.pageX - container.offsetLeft; startY = e.pageY - container.offsetTop; scrollLeft = container.scrollLeft; scrollTop = container.scrollTop; });
+container.addEventListener("mousedown", (e) => {
+    isDown = true;
+    startX = e.pageX - container.offsetLeft;
+    startY = e.pageY - container.offsetTop;
+    scrollLeft = container.scrollLeft;
+    scrollTop = container.scrollTop;
+});
 container.addEventListener("mouseleave", () => isDown = false);
 container.addEventListener("mouseup", () => isDown = false);
-container.addEventListener("mousemove", (e) => { if (!isDown) return; const x = e.pageX - container.offsetLeft; const y = e.pageY - container.offsetTop; container.scrollLeft = scrollLeft - (x - startX); container.scrollTop = scrollTop - (y - startY); });
+container.addEventListener("mousemove", (e) => {
+    if (!isDown) return;
+    const x = e.pageX - container.offsetLeft;
+    const y = e.pageY - container.offsetTop;
+    container.scrollLeft = scrollLeft - (x - startX);
+    container.scrollTop = scrollTop - (y - startY);
+});
+
+/* ANALYTICS */
+document.getElementById("analyticsBtn").onclick = () => {
+    const booked = allData.filter(x => x.status === "booked").length;
+    const plotting = allData.filter(x => {
+        const name = x.exhibitor || "";
+        return name.length > 0 && name === name.toLowerCase();
+    }).length;
+    alert(`Stats:\nBooked: ${booked}\nPlotting: ${plotting}`);
+};
 
 loadData();
