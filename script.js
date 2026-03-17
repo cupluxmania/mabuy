@@ -37,14 +37,18 @@ function renderFloor() {
     hallConfig.forEach(hall => {
         const hallDiv = document.createElement("div");
         hallDiv.className = "hall";
-        hallDiv.innerHTML = `<h2>${hall.name}</h2>`;
+        
+        // Make Header Clickable to auto-center the hall
+        const header = document.createElement("h2");
+        header.innerText = hall.name;
+        header.onclick = () => centerElement(hallDiv);
+        hallDiv.appendChild(header);
+
         const grid = document.createElement("div");
         grid.className = "grid";
 
         if (hall.name === "Ambulance") {
-            for (let i = 65; i <= 90; i++) {
-                grid.appendChild(createBooth(String.fromCharCode(i)));
-            }
+            for (let i = 65; i <= 90; i++) grid.appendChild(createBooth(String.fromCharCode(i)));
         } else {
             let startNum = parseInt(hall.start);
             let endNum = parseInt(hall.end);
@@ -78,29 +82,38 @@ function createBooth(id) {
     }
 
     b.onclick = (e) => {
-        e.stopPropagation();
-        const currentStatus = b.className.replace('booth ', '');
+        if (e) e.stopPropagation();
+        const currentStatus = b.className.replace('booth ', '').replace(' highlight', '');
         const statusProper = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
         panel.classList.remove("hidden");
         panelContent.innerHTML = `
-            <b>Booth:</b> ${id}<br>
-            <b>Status:</b> ${statusProper}<br>
-            <b>Exhibitor:</b> ${b.dataset.name || "-"}
+            <b>Booth Number</b><br>${id}<br><br>
+            <b>Status</b><br>${statusProper}<br><br>
+            <b>Exhibitor</b><br>${b.dataset.name || "-"}
         `;
     };
     return b;
 }
 
-/* IMPROVED SEARCH: SINGLE CLICK & AUTO-SCROLL */
+/* SMART NAVIGATION FUNCTION */
 
-// 1. Single click to show all booked/plotting exhibitors
+function centerElement(el) {
+    if (!el) return;
+    const elRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    const scrollX = container.scrollLeft + (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
+    const scrollY = container.scrollTop + (elRect.top - containerRect.top) - (containerRect.height / 2) + (elRect.height / 2);
+
+    container.scrollTo({ left: scrollX, top: scrollY, behavior: "smooth" });
+}
+
+/* SEARCH SYSTEM */
+
 searchBox.addEventListener("click", (e) => {
     e.stopPropagation();
-    const val = searchBox.value.toLowerCase();
-    if (!val) {
-        const list = allData.filter(x => x.status !== "available");
-        showSuggestions(list);
-    }
+    const list = allData.filter(x => x.status !== "available");
+    showSuggestions(list);
 });
 
 searchBox.addEventListener("input", () => {
@@ -116,25 +129,18 @@ function showSuggestions(list) {
     suggestions.innerHTML = "";
     if (list.length === 0) { suggestions.style.display = "none"; return; }
     suggestions.style.display = "block";
-
     list.forEach(x => {
         const div = document.createElement("div");
         div.className = "suggestionItem";
         div.innerText = `${x.boothid} - ${x.exhibitor}`;
-        
         div.onclick = (e) => {
             e.stopPropagation();
             const el = document.querySelector(`[data-id='${x.boothid}']`);
             if (el) {
-                // FIXED REDIRECT: Smoothly center the booth in the container
-                el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-                
-                // Visual feedback
+                centerElement(el);
                 el.classList.add("highlight");
-                setTimeout(() => el.classList.remove("highlight"), 2000);
-                
-                // Auto-open the side panel for the found booth
-                el.click(); 
+                setTimeout(() => el.classList.remove("highlight"), 3000);
+                el.click(); // Open panel
             }
             suggestions.style.display = "none";
         };
@@ -142,28 +148,23 @@ function showSuggestions(list) {
     });
 }
 
-/* NAVIGATION & UI */
+/* ZOOM & INTERACTION */
 
 document.getElementById("zoomIn").onclick = () => { zoomLevel += 0.1; applyZoom(); };
 document.getElementById("zoomOut").onclick = () => { zoomLevel = Math.max(0.3, zoomLevel - 0.1); applyZoom(); };
-
 function applyZoom() { 
     floor.style.transform = `scale(${zoomLevel})`; 
     document.getElementById("zoomLevel").innerText = Math.round(zoomLevel * 100) + "%";
 }
 
 document.addEventListener("click", (e) => {
-    if (!panel.contains(e.target) && !e.target.classList.contains('booth')) {
-        panel.classList.add("hidden");
-    }
-    if (!searchBox.contains(e.target) && !suggestions.contains(e.target)) {
-        suggestions.style.display = "none";
-    }
+    if (!panel.contains(e.target) && !e.target.classList.contains('booth')) panel.classList.add("hidden");
+    if (!searchBox.contains(e.target) && !suggestions.contains(e.target)) suggestions.style.display = "none";
 });
 
-/* DRAGGING LOGIC */
 let isDown = false, startX, startY, scrollLeft, scrollTop;
 container.addEventListener("mousedown", (e) => {
+    if (e.target.id !== "floorContainer" && e.target.id !== "floor") return;
     isDown = true;
     startX = e.pageX - container.offsetLeft;
     startY = e.pageY - container.offsetTop;
@@ -174,6 +175,7 @@ container.addEventListener("mouseleave", () => isDown = false);
 container.addEventListener("mouseup", () => isDown = false);
 container.addEventListener("mousemove", (e) => {
     if (!isDown) return;
+    e.preventDefault();
     const x = e.pageX - container.offsetLeft;
     const y = e.pageY - container.offsetTop;
     container.scrollLeft = scrollLeft - (x - startX);
