@@ -18,9 +18,6 @@ const panelContent = document.getElementById("panelContent");
 function initFloor() {
   halls.forEach(h => {
     const hall = document.createElement("div");
-    hall.className = "hall";
-    hall.dataset.name = h.name;
-
     const grid = document.createElement("div");
     grid.className = "grid";
 
@@ -56,7 +53,6 @@ function createBooth(id) {
       <b>Status:</b> ${b.dataset.status}<br>
       <b>Exhibitor:</b> ${b.dataset.name || "-"}
     `;
-
     setTimeout(()=>panel.classList.add("hidden"),5000);
   };
 
@@ -64,9 +60,12 @@ function createBooth(id) {
 }
 
 /* LOAD DATA */
+let allData = [];
+
 async function loadData() {
   const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
   const data = await res.json();
+  allData = data;
 
   const map = {};
   data.forEach(r => map[r.boothid] = r);
@@ -85,46 +84,47 @@ async function loadData() {
 const searchBox = document.getElementById("searchBox");
 const suggestions = document.getElementById("suggestions");
 
-searchBox.addEventListener("input", function () {
-  const k = this.value.toLowerCase();
-  suggestions.innerHTML = "";
-
-  document.querySelectorAll(".booth").forEach(b => {
-    const match = b.dataset.id.toLowerCase().includes(k) ||
-                  (b.dataset.name||"").toLowerCase().includes(k);
-
-    b.classList.toggle("dim", k && !match);
-    b.classList.toggle("highlight", match);
-
-    if (match && k) {
-      const div = document.createElement("div");
-      div.className = "suggestionItem";
-      div.innerText = `${b.dataset.id} - ${b.dataset.name || "Available"}`;
-
-      div.onclick = () => {
-        b.scrollIntoView({behavior:"smooth",block:"center"});
-        suggestions.innerHTML="";
-      };
-
-      suggestions.appendChild(div);
-    }
+function showSuggestions(list){
+  suggestions.innerHTML="";
+  list.forEach(r=>{
+    const div=document.createElement("div");
+    div.className="suggestionItem";
+    div.innerText=`${r.boothid} - ${r.exhibitor}`;
+    suggestions.appendChild(div);
   });
+}
+
+/* typing */
+searchBox.addEventListener("input", function () {
+  const k=this.value.toLowerCase();
+  if(!k){ suggestions.innerHTML=""; return;}
+
+  const filtered = allData.filter(r =>
+    r.boothid.toLowerCase().includes(k) ||
+    (r.exhibitor||"").toLowerCase().includes(k)
+  );
+
+  showSuggestions(filtered);
 });
 
-/* DRAG FIX */
+/* double click = show all */
+searchBox.addEventListener("dblclick", ()=>{
+  showSuggestions(allData);
+});
+
+/* DRAG */
 const container = document.getElementById("floorContainer");
 let isDown=false,startX,startY,scrollLeft,scrollTop;
 
 container.addEventListener("mousedown", e=>{
   isDown=true;
-  container.style.cursor="grabbing";
   startX=e.pageX;
   startY=e.pageY;
   scrollLeft=container.scrollLeft;
   scrollTop=container.scrollTop;
 });
 
-container.addEventListener("mouseup", ()=>{isDown=false;container.style.cursor="grab";});
+container.addEventListener("mouseup", ()=>isDown=false);
 container.addEventListener("mouseleave", ()=>isDown=false);
 
 container.addEventListener("mousemove", e=>{
@@ -142,6 +142,20 @@ function applyZoom(){
   floor.style.transform=`scale(${zoom})`;
   zoomLevel.innerText=Math.round(zoom*100)+"%";
 }
+
+/* ANALYTICS FIX */
+document.getElementById("analyticsBtn").onclick=()=>{
+  const total=allData.length;
+  const booked=allData.filter(r=>r.status==="booked").length;
+
+  panel.classList.remove("hidden");
+  panelContent.innerHTML=`
+    <h3>Analytics</h3>
+    Total Data: ${total}<br>
+    Booked: ${booked}<br>
+    Rate: ${((booked/total)*100).toFixed(1)}%
+  `;
+};
 
 /* INIT */
 initFloor();
