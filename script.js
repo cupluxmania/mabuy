@@ -9,7 +9,6 @@ const panelContent = document.getElementById("panelContent");
 
 let allData = [];
 let zoomLevel = 1;
-let isOpen = false;
 
 const hallConfig = [
   {name:"Hall 5", start:5001, end:"5078A"},
@@ -39,7 +38,6 @@ function renderFloor() {
         const hallDiv = document.createElement("div");
         hallDiv.className = "hall";
         hallDiv.innerHTML = `<h2>${hall.name}</h2>`;
-        
         const grid = document.createElement("div");
         grid.className = "grid";
 
@@ -51,7 +49,6 @@ function renderFloor() {
             let startNum = parseInt(hall.start);
             let endNum = parseInt(hall.end);
             let suffix = String(hall.end).replace(/[0-9]/g, '');
-
             for (let i = startNum; i <= endNum; i++) {
                 let finalId = (i === endNum && suffix) ? i + suffix : String(i);
                 grid.appendChild(createBooth(finalId));
@@ -64,36 +61,27 @@ function renderFloor() {
 
 function createBooth(id) {
     const b = document.createElement("div");
-    // Default State
     b.className = "booth available";
     b.innerText = id;
     b.dataset.id = id;
     b.dataset.name = "";
-    b.dataset.tooltip = "Available"; // Default tooltip
+    b.dataset.tooltip = "Available";
 
     const d = allData.find(x => String(x.boothid).toLowerCase() === String(id).toLowerCase());
-    
     if (d) {
         let name = (d.exhibitor || "").trim();
         let status = (d.status || "available").toLowerCase();
-        
-        // Plotting logic: if name is all lowercase
         if (name.length > 0 && name === name.toLowerCase()) status = "plotting";
-        
         b.className = "booth " + status;
         b.dataset.name = name;
-        // FIX: Ensure tooltip matches the status or name
         b.dataset.tooltip = name || (status.charAt(0).toUpperCase() + status.slice(1));
     }
 
     b.onclick = (e) => {
         e.stopPropagation();
-        panel.classList.remove("hidden");
-        
-        // Proper Case Logic for Status
         const currentStatus = b.className.replace('booth ', '');
         const statusProper = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
-
+        panel.classList.remove("hidden");
         panelContent.innerHTML = `
             <b>Booth:</b> ${id}<br>
             <b>Status:</b> ${statusProper}<br>
@@ -103,34 +91,50 @@ function createBooth(id) {
     return b;
 }
 
-/* SEARCH LOGIC */
-searchBox.addEventListener("input", () => {
+/* IMPROVED SEARCH: SINGLE CLICK & AUTO-SCROLL */
+
+// 1. Single click to show all booked/plotting exhibitors
+searchBox.addEventListener("click", (e) => {
+    e.stopPropagation();
     const val = searchBox.value.toLowerCase();
-    if (!val) { suggestions.style.display = "none"; return; }
-    const filtered = allData.filter(x => x.status !== "available" && (String(x.boothid).toLowerCase().includes(val) || x.exhibitor.toLowerCase().includes(val)));
-    showSuggestions(filtered);
+    if (!val) {
+        const list = allData.filter(x => x.status !== "available");
+        showSuggestions(list);
+    }
 });
 
-searchBox.addEventListener("dblclick", () => {
-    isOpen = !isOpen;
-    if (isOpen) showSuggestions(allData.filter(x => x.status !== "available"));
-    else suggestions.style.display = "none";
+searchBox.addEventListener("input", () => {
+    const val = searchBox.value.toLowerCase();
+    const filtered = allData.filter(x => 
+        x.status !== "available" && 
+        (String(x.boothid).toLowerCase().includes(val) || x.exhibitor.toLowerCase().includes(val))
+    );
+    showSuggestions(filtered);
 });
 
 function showSuggestions(list) {
     suggestions.innerHTML = "";
     if (list.length === 0) { suggestions.style.display = "none"; return; }
     suggestions.style.display = "block";
+
     list.forEach(x => {
         const div = document.createElement("div");
         div.className = "suggestionItem";
         div.innerText = `${x.boothid} - ${x.exhibitor}`;
-        div.onclick = () => {
+        
+        div.onclick = (e) => {
+            e.stopPropagation();
             const el = document.querySelector(`[data-id='${x.boothid}']`);
             if (el) {
+                // FIXED REDIRECT: Smoothly center the booth in the container
                 el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+                
+                // Visual feedback
                 el.classList.add("highlight");
                 setTimeout(() => el.classList.remove("highlight"), 2000);
+                
+                // Auto-open the side panel for the found booth
+                el.click(); 
             }
             suggestions.style.display = "none";
         };
@@ -138,26 +142,26 @@ function showSuggestions(list) {
     });
 }
 
-/* ZOOM */
+/* NAVIGATION & UI */
+
 document.getElementById("zoomIn").onclick = () => { zoomLevel += 0.1; applyZoom(); };
-document.getElementById("zoomOut").onclick = () => { zoomLevel = Math.max(0.4, zoomLevel - 0.1); applyZoom(); };
+document.getElementById("zoomOut").onclick = () => { zoomLevel = Math.max(0.3, zoomLevel - 0.1); applyZoom(); };
+
 function applyZoom() { 
     floor.style.transform = `scale(${zoomLevel})`; 
     document.getElementById("zoomLevel").innerText = Math.round(zoomLevel * 100) + "%";
 }
 
-/* CLICK ANYWHERE TO CLOSE PANELS */
 document.addEventListener("click", (e) => {
     if (!panel.contains(e.target) && !e.target.classList.contains('booth')) {
         panel.classList.add("hidden");
     }
     if (!searchBox.contains(e.target) && !suggestions.contains(e.target)) {
         suggestions.style.display = "none";
-        isOpen = false;
     }
 });
 
-/* DRAG TO SCROLL */
+/* DRAGGING LOGIC */
 let isDown = false, startX, startY, scrollLeft, scrollTop;
 container.addEventListener("mousedown", (e) => {
     isDown = true;
