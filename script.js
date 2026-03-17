@@ -64,29 +64,39 @@ function renderFloor() {
 
 function createBooth(id) {
     const b = document.createElement("div");
+    // Default State
     b.className = "booth available";
     b.innerText = id;
     b.dataset.id = id;
-    b.dataset.tooltip = "Available";
+    b.dataset.name = "";
+    b.dataset.tooltip = "Available"; // Default tooltip
 
     const d = allData.find(x => String(x.boothid).toLowerCase() === String(id).toLowerCase());
+    
     if (d) {
         let name = (d.exhibitor || "").trim();
         let status = (d.status || "available").toLowerCase();
-        // Plotting logic: name is all lowercase
+        
+        // Plotting logic: if name is all lowercase
         if (name.length > 0 && name === name.toLowerCase()) status = "plotting";
         
         b.className = "booth " + status;
         b.dataset.name = name;
-        b.dataset.tooltip = name || "Booked";
+        // FIX: Ensure tooltip matches the status or name
+        b.dataset.tooltip = name || (status.charAt(0).toUpperCase() + status.slice(1));
     }
 
     b.onclick = (e) => {
         e.stopPropagation();
         panel.classList.remove("hidden");
+        
+        // Proper Case Logic for Status
+        const currentStatus = b.className.replace('booth ', '');
+        const statusProper = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
+
         panelContent.innerHTML = `
             <b>Booth:</b> ${id}<br>
-            <b>Status:</b> ${b.className.replace('booth ', '').toUpperCase()}<br>
+            <b>Status:</b> ${statusProper}<br>
             <b>Exhibitor:</b> ${b.dataset.name || "-"}
         `;
     };
@@ -165,15 +175,5 @@ container.addEventListener("mousemove", (e) => {
     container.scrollLeft = scrollLeft - (x - startX);
     container.scrollTop = scrollTop - (y - startY);
 });
-
-/* ANALYTICS */
-document.getElementById("analyticsBtn").onclick = () => {
-    const booked = allData.filter(x => x.status === "booked").length;
-    const plotting = allData.filter(x => {
-        const name = x.exhibitor || "";
-        return name.length > 0 && name === name.toLowerCase();
-    }).length;
-    alert(`Stats:\nBooked: ${booked}\nPlotting: ${plotting}`);
-};
 
 loadData();
