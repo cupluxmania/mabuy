@@ -1,61 +1,27 @@
 const G_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeXfwbFMaC8WH3th-aw5_PtMGTlz6UHMC5S5tWs9j1FW-G_Fszldy9QqiY5Zps-mFGQg/exec";
 
-const halls = [
-  {name:"Hall 5", start:5001, end:"5078A"},
-  {name:"Hall 6", start:6001, end:"6189A"},
-  {name:"Hall 7", start:7001, end:"7185A"},
-  {name:"Hall 8", start:8001, end:"8181A"},
-  {name:"Hall 9", start:9001, end:"9191A"},
-  {name:"Hall 10", start:1001, end:"1151A"},
-  {name:"Ambulance", start:"A", end:"Z"}
-];
-
 const floor = document.getElementById("floor");
 const panel = document.getElementById("sidePanel");
 const panelContent = document.getElementById("panelContent");
+const suggestions = document.getElementById("suggestions");
+const searchBox = document.getElementById("searchBox");
 
 let allData = [];
-
-/* INIT FLOOR */
-function initFloor() {
-  halls.forEach(h => {
-    const hall = document.createElement("div");
-    const grid = document.createElement("div");
-    grid.className = "grid";
-
-    if (h.name === "Ambulance") {
-      for (let i = 65; i <= 90; i++) {
-        grid.appendChild(createBooth(String.fromCharCode(i)));
-      }
-    } else {
-      let start = parseInt(h.start);
-      let end = parseInt(h.end);
-      const letter = h.end.replace(/\d+/,'');
-      for (let i = start; i <= end; i++) {
-        grid.appendChild(createBooth(i + (i===end?letter:'')));
-      }
-    }
-
-    hall.appendChild(grid);
-    floor.appendChild(hall);
-  });
-
-  loadData();
-}
+let suggestionOpen = false;
 
 /* CREATE BOOTH */
-function createBooth(id) {
-  const b = document.createElement("div");
-  b.className = "booth available";
-  b.innerText = id;
-  b.dataset.id = id;
+function createBooth(id){
+  const b=document.createElement("div");
+  b.className="booth available";
+  b.innerText=id;
+  b.dataset.id=id;
 
-  b.onclick = () => {
+  b.onclick=()=>{
     panel.classList.remove("hidden");
-    panelContent.innerHTML = `
+    panelContent.innerHTML=`
       <b>Booth:</b> ${id}<br>
       <b>Status:</b> ${b.dataset.status}<br>
-      <b>Exhibitor:</b> ${b.dataset.name || "-"}
+      <b>Exhibitor:</b> ${b.dataset.name||"-"}
     `;
     setTimeout(()=>panel.classList.add("hidden"),5000);
   };
@@ -63,60 +29,64 @@ function createBooth(id) {
   return b;
 }
 
+/* INIT SIMPLE GRID */
+for(let i=5001;i<=5056;i++){
+  floor.appendChild(createBooth(i));
+}
+
 /* LOAD DATA */
-async function loadData() {
-  const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
-  const data = await res.json();
-  allData = data;
+async function loadData(){
+  const res=await fetch(G_SCRIPT_URL);
+  const data=await res.json();
+  allData=data;
 
-  const map = {};
-  data.forEach(r => map[r.boothid] = r);
+  const map={};
+  data.forEach(r=>map[r.boothid]=r);
 
-  document.querySelectorAll(".booth").forEach(b => {
-    const d = map[b.dataset.id];
-    if (d) {
-      b.dataset.status = d.status;
-      b.dataset.name = d.exhibitor || "";
-      b.className = "booth " + d.status;
+  document.querySelectorAll(".booth").forEach(b=>{
+    const d=map[b.dataset.id];
+    if(d){
+      b.dataset.status=d.status;
+      b.dataset.name=d.exhibitor||"";
+      b.className="booth "+d.status;
     }
   });
 }
 
-/* SEARCH (BOOKED ONLY) */
-const searchBox = document.getElementById("searchBox");
-const suggestions = document.getElementById("suggestions");
-
-let suggestionOpen = false;
-
+/* SHOW SUGGESTION */
 function showSuggestions(list){
-  suggestions.innerHTML = "";
-
-  if(list.length === 0){
-    suggestions.style.display = "none";
-    return;
-  }
-
-  suggestions.style.display = "block";
+  suggestions.innerHTML="";
+  suggestions.style.display="block";
 
   list.forEach(r=>{
-    const div = document.createElement("div");
-    div.className = "suggestionItem";
-    div.innerText = `${r.boothid} - ${r.exhibitor}`;
+    const div=document.createElement("div");
+    div.className="suggestionItem";
+    div.innerText=`${r.boothid} - ${r.exhibitor}`;
+
+    div.onclick=()=>{
+      const target=document.querySelector(`[data-id="${r.boothid}"]`);
+      if(target){
+        target.scrollIntoView({behavior:"smooth",block:"center"});
+        target.classList.add("highlight");
+        setTimeout(()=>target.classList.remove("highlight"),2000);
+      }
+    };
+
     suggestions.appendChild(div);
   });
 }
 
-/* INPUT */
-searchBox.addEventListener("input", function () {
-  const k = this.value.toLowerCase();
+/* SEARCH INPUT */
+searchBox.addEventListener("input",()=>{
+  const k=searchBox.value.toLowerCase();
 
   if(!k){
-    suggestions.style.display = "none";
+    suggestions.style.display="none";
     return;
   }
 
-  const filtered = allData.filter(r =>
-    r.status === "booked" &&
+  const filtered=allData.filter(r=>
+    r.status==="booked" &&
     (r.boothid.toLowerCase().includes(k) ||
      (r.exhibitor||"").toLowerCase().includes(k))
   );
@@ -125,64 +95,24 @@ searchBox.addEventListener("input", function () {
 });
 
 /* DOUBLE CLICK TOGGLE */
-searchBox.addEventListener("dblclick", ()=>{
-  suggestionOpen = !suggestionOpen;
+searchBox.addEventListener("dblclick",()=>{
+  suggestionOpen=!suggestionOpen;
 
   if(!suggestionOpen){
     suggestions.style.display="none";
     return;
   }
 
-  const bookedOnly = allData.filter(r => r.status === "booked");
-  showSuggestions(bookedOnly);
+  showSuggestions(allData.filter(r=>r.status==="booked"));
 });
 
-/* DRAG */
-const container = document.getElementById("floorContainer");
-let isDown=false,startX,startY,scrollLeft,scrollTop;
-
-container.addEventListener("mousedown", e=>{
-  isDown=true;
-  startX=e.pageX;
-  startY=e.pageY;
-  scrollLeft=container.scrollLeft;
-  scrollTop=container.scrollTop;
+/* CLICK OUTSIDE CLOSE */
+document.addEventListener("click",(e)=>{
+  if(!searchBox.contains(e.target) && !suggestions.contains(e.target)){
+    suggestions.style.display="none";
+    suggestionOpen=false;
+  }
 });
-
-container.addEventListener("mouseup", ()=>isDown=false);
-container.addEventListener("mouseleave", ()=>isDown=false);
-
-container.addEventListener("mousemove", e=>{
-  if(!isDown)return;
-  e.preventDefault();
-  container.scrollLeft = scrollLeft - (e.pageX - startX);
-  container.scrollTop = scrollTop - (e.pageY - startY);
-});
-
-/* ZOOM */
-let zoom=1;
-zoomIn.onclick=()=>{zoom+=0.1;applyZoom();}
-zoomOut.onclick=()=>{zoom-=0.1;applyZoom();}
-
-function applyZoom(){
-  floor.style.transform=`scale(${zoom})`;
-  zoomLevel.innerText=Math.round(zoom*100)+"%";
-}
-
-/* ANALYTICS */
-document.getElementById("analyticsBtn").onclick=()=>{
-  const total=allData.length;
-  const booked=allData.filter(r=>r.status==="booked").length;
-
-  panel.classList.remove("hidden");
-  panelContent.innerHTML=`
-    <h3>Analytics</h3>
-    Total: ${total}<br>
-    Booked: ${booked}<br>
-    Rate: ${((booked/total)*100).toFixed(1)}%
-  `;
-};
 
 /* INIT */
-initFloor();
-setInterval(loadData,120000);
+loadData();
