@@ -14,7 +14,9 @@ const floor = document.getElementById("floor");
 const panel = document.getElementById("sidePanel");
 const panelContent = document.getElementById("panelContent");
 
-/* INIT */
+let allData = [];
+
+/* INIT FLOOR */
 function initFloor() {
   halls.forEach(h => {
     const hall = document.createElement("div");
@@ -22,7 +24,9 @@ function initFloor() {
     grid.className = "grid";
 
     if (h.name === "Ambulance") {
-      for (let i = 65; i <= 90; i++) grid.appendChild(createBooth(String.fromCharCode(i)));
+      for (let i = 65; i <= 90; i++) {
+        grid.appendChild(createBooth(String.fromCharCode(i)));
+      }
     } else {
       let start = parseInt(h.start);
       let end = parseInt(h.end);
@@ -39,7 +43,7 @@ function initFloor() {
   loadData();
 }
 
-/* BOOTH */
+/* CREATE BOOTH */
 function createBooth(id) {
   const b = document.createElement("div");
   b.className = "booth available";
@@ -60,8 +64,6 @@ function createBooth(id) {
 }
 
 /* LOAD DATA */
-let allData = [];
-
 async function loadData() {
   const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
   const data = await res.json();
@@ -80,36 +82,59 @@ async function loadData() {
   });
 }
 
-/* SEARCH */
+/* SEARCH (BOOKED ONLY) */
 const searchBox = document.getElementById("searchBox");
 const suggestions = document.getElementById("suggestions");
 
+let suggestionOpen = false;
+
 function showSuggestions(list){
-  suggestions.innerHTML="";
+  suggestions.innerHTML = "";
+
+  if(list.length === 0){
+    suggestions.style.display = "none";
+    return;
+  }
+
+  suggestions.style.display = "block";
+
   list.forEach(r=>{
-    const div=document.createElement("div");
-    div.className="suggestionItem";
-    div.innerText=`${r.boothid} - ${r.exhibitor}`;
+    const div = document.createElement("div");
+    div.className = "suggestionItem";
+    div.innerText = `${r.boothid} - ${r.exhibitor}`;
     suggestions.appendChild(div);
   });
 }
 
-/* typing */
+/* INPUT */
 searchBox.addEventListener("input", function () {
-  const k=this.value.toLowerCase();
-  if(!k){ suggestions.innerHTML=""; return;}
+  const k = this.value.toLowerCase();
+
+  if(!k){
+    suggestions.style.display = "none";
+    return;
+  }
 
   const filtered = allData.filter(r =>
-    r.boothid.toLowerCase().includes(k) ||
-    (r.exhibitor||"").toLowerCase().includes(k)
+    r.status === "booked" &&
+    (r.boothid.toLowerCase().includes(k) ||
+     (r.exhibitor||"").toLowerCase().includes(k))
   );
 
   showSuggestions(filtered);
 });
 
-/* double click = show all */
+/* DOUBLE CLICK TOGGLE */
 searchBox.addEventListener("dblclick", ()=>{
-  showSuggestions(allData);
+  suggestionOpen = !suggestionOpen;
+
+  if(!suggestionOpen){
+    suggestions.style.display="none";
+    return;
+  }
+
+  const bookedOnly = allData.filter(r => r.status === "booked");
+  showSuggestions(bookedOnly);
 });
 
 /* DRAG */
@@ -138,12 +163,13 @@ container.addEventListener("mousemove", e=>{
 let zoom=1;
 zoomIn.onclick=()=>{zoom+=0.1;applyZoom();}
 zoomOut.onclick=()=>{zoom-=0.1;applyZoom();}
+
 function applyZoom(){
   floor.style.transform=`scale(${zoom})`;
   zoomLevel.innerText=Math.round(zoom*100)+"%";
 }
 
-/* ANALYTICS FIX */
+/* ANALYTICS */
 document.getElementById("analyticsBtn").onclick=()=>{
   const total=allData.length;
   const booked=allData.filter(r=>r.status==="booked").length;
@@ -151,7 +177,7 @@ document.getElementById("analyticsBtn").onclick=()=>{
   panel.classList.remove("hidden");
   panelContent.innerHTML=`
     <h3>Analytics</h3>
-    Total Data: ${total}<br>
+    Total: ${total}<br>
     Booked: ${booked}<br>
     Rate: ${((booked/total)*100).toFixed(1)}%
   `;
