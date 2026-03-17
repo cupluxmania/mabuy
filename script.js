@@ -37,13 +37,7 @@ function renderFloor() {
     hallConfig.forEach(hall => {
         const hallDiv = document.createElement("div");
         hallDiv.className = "hall";
-        
-        // Make Header Clickable to auto-center the hall
-        const header = document.createElement("h2");
-        header.innerText = hall.name;
-        header.onclick = () => centerElement(hallDiv);
-        hallDiv.appendChild(header);
-
+        hallDiv.innerHTML = `<h2>${hall.name}</h2>`;
         const grid = document.createElement("div");
         grid.className = "grid";
 
@@ -95,20 +89,7 @@ function createBooth(id) {
     return b;
 }
 
-/* SMART NAVIGATION FUNCTION */
-
-function centerElement(el) {
-    if (!el) return;
-    const elRect = el.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    const scrollX = container.scrollLeft + (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
-    const scrollY = container.scrollTop + (elRect.top - containerRect.top) - (containerRect.height / 2) + (elRect.height / 2);
-
-    container.scrollTo({ left: scrollX, top: scrollY, behavior: "smooth" });
-}
-
-/* SEARCH SYSTEM */
+/* SMART JUMP & SEARCH */
 
 searchBox.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -137,7 +118,15 @@ function showSuggestions(list) {
             e.stopPropagation();
             const el = document.querySelector(`[data-id='${x.boothid}']`);
             if (el) {
-                centerElement(el);
+                // FORCE JUMP TO COORDINATES
+                const boothRect = el.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+
+                const scrollX = container.scrollLeft + (boothRect.left - containerRect.left) - (containerRect.width / 2) + (boothRect.width / 2);
+                const scrollY = container.scrollTop + (boothRect.top - containerRect.top) - (containerRect.height / 2) + (boothRect.height / 2);
+
+                container.scrollTo({ left: scrollX, top: scrollY, behavior: "smooth" });
+
                 el.classList.add("highlight");
                 setTimeout(() => el.classList.remove("highlight"), 3000);
                 el.click(); // Open panel
@@ -148,7 +137,7 @@ function showSuggestions(list) {
     });
 }
 
-/* ZOOM & INTERACTION */
+/* UI CONTROLS */
 
 document.getElementById("zoomIn").onclick = () => { zoomLevel += 0.1; applyZoom(); };
 document.getElementById("zoomOut").onclick = () => { zoomLevel = Math.max(0.3, zoomLevel - 0.1); applyZoom(); };
