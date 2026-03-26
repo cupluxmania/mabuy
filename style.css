@@ -1,28 +1,67 @@
 body { margin:0; font-family:'Segoe UI'; background:#f1f5f9; }
 
-header { padding:20px; font-size:22px; font-weight:bold; background:white; }
+header {
+padding:20px;
+font-size:22px;
+font-weight:bold;
+background:white;
+}
 
 .container { padding:20px; }
 
 .searchWrapper { position:relative; margin-bottom:15px; }
-#searchBox { width:100%; padding:12px; border-radius:8px; border:1px solid #ccc; }
+
+#searchBox {
+width:100%;
+padding:12px;
+border-radius:8px;
+border:1px solid #ccc;
+}
 
 #suggestions {
-position:absolute; width:100%; background:white;
+position:absolute;
+width:100%;
+background:white;
 box-shadow:0 10px 25px rgba(0,0,0,0.2);
-display:none; max-height:300px; overflow:auto;
+display:none;
+max-height:300px;
+overflow:auto;
 z-index:9999;
 }
-.suggestionItem { padding:10px; cursor:pointer; }
-.suggestionItem:hover { background:#eee; }
 
-#legend { display:flex; gap:20px; margin-bottom:10px; }
-.dot { width:12px; height:12px; display:inline-block; border-radius:3px; margin-right:5px; }
+.suggestionItem {
+padding:10px;
+cursor:pointer;
+}
+
+.suggestionItem:hover {
+background:#eee;
+}
+
+#legend {
+display:flex;
+gap:20px;
+margin-bottom:10px;
+}
+
+.dot {
+width:12px;
+height:12px;
+display:inline-block;
+border-radius:3px;
+margin-right:5px;
+}
+
 .available { background:#3b82f6; }
 .booked { background:#ef4444; }
 .plotting { background:#eab308; }
 
-#menu { margin-bottom:15px; display:flex; gap:10px; align-items:center; }
+#menu {
+margin-bottom:15px;
+display:flex;
+gap:10px;
+align-items:center;
+}
 
 button {
 padding:8px 12px;
@@ -46,10 +85,20 @@ display:flex;
 gap:80px;
 padding:150px;
 width:max-content;
+transform-origin:0 0;
 }
 
-.hall { display:flex; flex-direction:column; gap:10px; }
-.hall h2 { background:#e2e8f0; padding:6px 10px; border-radius:6px; }
+.hall {
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.hall h2 {
+background:#e2e8f0;
+padding:6px 10px;
+border-radius:6px;
+}
 
 .grid {
 display:grid;
@@ -93,7 +142,6 @@ box-shadow:0 10px 25px rgba(0,0,0,0.2);
 
 .hidden { display:none; }
 
-/* MINI MAP */
 #miniMap {
 position:fixed;
 bottom:20px;
