@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
+    font-family: 'Segoe UI', Arial;
     background: #f1f5f9;
 }
 
@@ -15,17 +15,11 @@ header {
 .container { padding: 20px 40px; }
 
 /* SEARCH */
-.searchWrapper {
-    position: relative;
-    margin-bottom: 20px;
-    z-index: 9999;
-}
-
+.searchWrapper { position: relative; margin-bottom: 20px; z-index: 1000; }
 #searchBox {
     width: 100%;
-    padding: 15px;
-    font-size: 16px;
-    border-radius: 8px;
+    padding: 14px;
+    border-radius: 10px;
     border: 1px solid #ccc;
 }
 
@@ -33,63 +27,39 @@ header {
     position: absolute;
     width: 100%;
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-radius: 10px;
     display: none;
     max-height: 300px;
     overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
 
 .suggestionItem {
     padding: 12px;
     cursor: pointer;
 }
-
-.suggestionItem:hover {
-    background: #eff6ff;
-}
+.suggestionItem:hover { background: #eff6ff; }
 
 /* LEGEND */
-#legend {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 15px;
-    font-weight: bold;
-}
-
-.dot {
-    width: 14px;
-    height: 14px;
-    display: inline-block;
-    border-radius: 3px;
-    margin-right: 5px;
-}
+#legend { display: flex; gap: 20px; margin-bottom: 10px; }
+.dot { width: 12px; height: 12px; display: inline-block; border-radius: 3px; margin-right: 5px; }
 
 .available { background: #3b82f6; }
 .booked { background: #ef4444; }
 .plotting { background: #eab308; }
 
 /* MENU */
-#menu {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
+#menu { display: flex; gap: 10px; margin-bottom: 10px; }
 
 button {
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: none;
-    background: #1e293b;
+    background: linear-gradient(135deg, #1e293b, #334155);
     color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
     cursor: pointer;
-    transition: 0.2s;
 }
-
-button:hover {
-    background: #334155;
-}
+button:hover { transform: scale(1.05); }
 
 /* FLOOR */
 #floorContainer {
@@ -98,6 +68,8 @@ button:hover {
     background: white;
     border-radius: 12px;
     cursor: grab;
+    position: relative;
+    scroll-behavior: smooth;
 }
 
 #floor {
@@ -107,18 +79,7 @@ button:hover {
     transform-origin: 0 0;
 }
 
-.hall {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.hall h2 {
-    background: #f8fafc;
-    padding: 8px;
-    border-radius: 6px;
-    cursor: pointer;
-}
+.hall { display: flex; flex-direction: column; gap: 10px; }
 
 .grid {
     display: grid;
@@ -126,10 +87,11 @@ button:hover {
     gap: 10px;
 }
 
+/* BOOTH */
 .booth {
     width: 80px;
     height: 80px;
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -137,17 +99,18 @@ button:hover {
     font-size: 12px;
     font-weight: bold;
     cursor: pointer;
+    user-select: none;
 }
 
-/* HIGHLIGHT */
-.highlight-blink {
-    animation: blink 1s infinite;
+/* BLINK + BORDER */
+.highlight {
+    animation: blink 0.8s infinite;
     outline: 4px solid #facc15;
 }
 
 @keyframes blink {
     0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
+    50% { transform: scale(1.15); }
     100% { transform: scale(1); }
 }
 
@@ -160,36 +123,24 @@ button:hover {
     background: white;
     padding: 20px;
     border-radius: 12px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
 .hidden { display: none; }
 
-/* MINI MAP */
-#miniMap {
+/* MINIMAP */
+#minimap {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px;
     width: 180px;
-    height: 140px;
-    background: white;
-    border-radius: 12px;
-    padding: 10px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    height: 120px;
+    background: rgba(30,41,59,0.9);
+    border-radius: 10px;
+    overflow: hidden;
 }
 
-.miniHall {
-    background: #e2e8f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.miniHall:hover {
-    background: #3b82f6;
-    color: white;
+#minimapView {
+    position: absolute;
+    border: 2px solid #facc15;
 }
