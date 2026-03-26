@@ -10,18 +10,29 @@ const panelContent = document.getElementById("panelContent");
 let allData = [];
 let zoomLevel = 1;
 
-const hallConfig = [
-  {name:"Hall 5", start:5001, end:"5078A"},
-  {name:"Hall 6", start:6001, end:"6189A"},
-  {name:"Hall 7", start:7001, end:"7185A"},
-  {name:"Hall 8", start:8001, end:"8181A"},
-  {name:"Hall 9", start:9001, end:"9191A"},
-  {name:"Hall 10", start:1001, end:"1151A"},
-  {name:"Ambulance", start:"A", end:"Z"}
-];
+/* =========================
+   NORMALIZE ID
+========================= */
+function normalizeId(id) {
+    return String(id).replace(/\s+/g, "").toLowerCase();
+}
 
 /* =========================
-   LOAD + FIX MULTI BOOTH
+   CHECK VARIANT (e.g. 5061-A)
+========================= */
+function hasVariant(baseId) {
+    return allData.some(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
+}
+
+/* =========================
+   GET VARIANTS LIST
+========================= */
+function getVariants(baseId) {
+    return allData.filter(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
+}
+
+/* =========================
+   LOAD DATA (MULTI FIX)
 ========================= */
 async function loadData() {
     try {
@@ -33,7 +44,6 @@ async function loadData() {
         raw.forEach(row => {
             if (!row.boothid) return;
 
-            // SPLIT MULTIPLE BOOTH IDs
             const booths = String(row.boothid).split(",");
 
             booths.forEach(id => {
@@ -47,14 +57,28 @@ async function loadData() {
 
         allData = expanded;
 
-        console.log("FINAL DATA:", allData);
+        console.log("DATA READY:", allData);
 
         renderFloor();
+
     } catch (e) {
         console.error("Load error:", e);
         renderFloor();
     }
 }
+
+/* =========================
+   HALL CONFIG
+========================= */
+const hallConfig = [
+  {name:"Hall 5", start:5001, end:"5078A"},
+  {name:"Hall 6", start:6001, end:"6189A"},
+  {name:"Hall 7", start:7001, end:"7185A"},
+  {name:"Hall 8", start:8001, end:"8181A"},
+  {name:"Hall 9", start:9001, end:"9191A"},
+  {name:"Hall 10", start:1001, end:"1151A"},
+  {name:"Ambulance", start:"A", end:"Z"}
+];
 
 /* =========================
    RENDER FLOOR
@@ -65,7 +89,7 @@ function renderFloor() {
     hallConfig.forEach(hall => {
         const hallDiv = document.createElement("div");
         hallDiv.className = "hall";
-        
+
         const h2 = document.createElement("h2");
         h2.innerText = hall.name;
         h2.onclick = () => jumpToElement(hallDiv);
@@ -84,7 +108,18 @@ function renderFloor() {
             let suffix = String(hall.end).replace(/[0-9]/g, '');
 
             for (let i = startNum; i <= endNum; i++) {
-                let finalId = (i === endNum && suffix) ? i + suffix : String(i);
+
+                let baseId = String(i);
+
+                // 🚨 SKIP BASE IF VARIANT EXISTS
+                if (hasVariant(baseId)) {
+                    const variants = getVariants(baseId);
+                    variants.forEach(v => grid.appendChild(createBooth(v.boothid)));
+                    continue;
+                }
+
+                let finalId = (i === endNum && suffix) ? i + suffix : baseId;
+
                 grid.appendChild(createBooth(finalId));
             }
         }
@@ -95,7 +130,7 @@ function renderFloor() {
 }
 
 /* =========================
-   CREATE BOOTH (FIXED MATCH)
+   CREATE BOOTH
 ========================= */
 function createBooth(id) {
     const b = document.createElement("div");
@@ -105,7 +140,7 @@ function createBooth(id) {
     b.dataset.name = "";
     b.dataset.tooltip = "Available";
 
-    const d = allData.find(x => String(x.boothid).toLowerCase() === String(id).toLowerCase());
+    const d = allData.find(x => normalizeId(x.boothid) === normalizeId(id));
 
     if (d) {
         let name = d.exhibitor;
@@ -149,7 +184,7 @@ function jumpToElement(el) {
 }
 
 /* =========================
-   SEARCH (FIXED)
+   SEARCH
 ========================= */
 searchBox.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -163,7 +198,7 @@ searchBox.addEventListener("input", () => {
         allData.filter(x =>
             x.status !== "available" &&
             (
-                String(x.boothid).toLowerCase().includes(val) ||
+                normalizeId(x.boothid).includes(normalizeId(val)) ||
                 (x.exhibitor || "").toLowerCase().includes(val)
             )
         )
@@ -192,10 +227,8 @@ function showSuggestions(list) {
 
             if (el) {
                 jumpToElement(el);
-
                 el.classList.add("highlight");
                 setTimeout(() => el.classList.remove("highlight"), 3000);
-
                 el.click();
             }
 
