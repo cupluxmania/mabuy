@@ -71,12 +71,12 @@ async function loadData() {
    HALL CONFIG
 ========================= */
 const hallConfig = [
-  {name:"Hall 5", start:5001, end:"5078A"},
-  {name:"Hall 6", start:6001, end:"6189A"},
-  {name:"Hall 7", start:7001, end:"7185A"},
-  {name:"Hall 8", start:8001, end:"8181A"},
-  {name:"Hall 9", start:9001, end:"9191A"},
-  {name:"Hall 10", start:1001, end:"1151A"},
+  {name:"Hall 5", start:5001, end:"5078-A"},
+  {name:"Hall 6", start:6001, end:"6189-A"},
+  {name:"Hall 7", start:7001, end:"7185-A"},
+  {name:"Hall 8", start:8001, end:"8181-A"},
+  {name:"Hall 9", start:9001, end:"9191-A"},
+  {name:"Hall 10", start:1001, end:"1151-A"},
   {name:"Ambulance", start:"A", end:"Z"}
 ];
 
