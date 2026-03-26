@@ -10,26 +10,30 @@ const panelContent = document.getElementById("panelContent");
 let allData = [];
 let zoomLevel = 1;
 
-/* ========================= */
+/* =========================
+   NORMALIZE ID
+========================= */
 function normalizeId(id) {
     return String(id).replace(/\s+/g, "").toLowerCase();
 }
 
-function getBaseId(id) {
-    return String(id).split("-")[0];
+/* =========================
+   CHECK VARIANT (e.g. 5061-A)
+========================= */
+function hasVariant(baseId) {
+    return allData.some(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
 }
 
-function getGroupedBooths() {
-    const groups = {};
-    allData.forEach(x => {
-        const base = getBaseId(x.boothid);
-        if (!groups[base]) groups[base] = [];
-        groups[base].push(x);
-    });
-    return groups;
+/* =========================
+   GET VARIANTS LIST
+========================= */
+function getVariants(baseId) {
+    return allData.filter(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
 }
 
-/* ========================= */
+/* =========================
+   LOAD DATA (MULTI FIX)
+========================= */
 async function loadData() {
     try {
         const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
@@ -52,6 +56,9 @@ async function loadData() {
         });
 
         allData = expanded;
+
+        console.log("DATA READY:", allData);
+
         renderFloor();
 
     } catch (e) {
@@ -60,22 +67,24 @@ async function loadData() {
     }
 }
 
-/* ========================= */
+/* =========================
+   HALL CONFIG
+========================= */
 const hallConfig = [
-  {name:"Hall 5", start:5001, end:"5078A"},
-  {name:"Hall 6", start:6001, end:"6189A"},
-  {name:"Hall 7", start:7001, end:"7185A"},
-  {name:"Hall 8", start:8001, end:"8181A"},
-  {name:"Hall 9", start:9001, end:"9191A"},
-  {name:"Hall 10", start:1001, end:"1151A"},
+  {name:"Hall 5", start:5001, end:"5078-A"},
+  {name:"Hall 6", start:6001, end:"6189-A"},
+  {name:"Hall 7", start:7001, end:"7196-A"},
+  {name:"Hall 8", start:8001, end:"8181-A"},
+  {name:"Hall 9", start:9001, end:"9191-A"},
+  {name:"Hall 10", start:1001, end:"1151-A"},
   {name:"Ambulance", start:"A", end:"Z"}
 ];
 
-/* ========================= */
+/* =========================
+   RENDER FLOOR
+========================= */
 function renderFloor() {
     floor.innerHTML = "";
-
-    const grouped = getGroupedBooths();
 
     hallConfig.forEach(hall => {
         const hallDiv = document.createElement("div");
@@ -96,24 +105,22 @@ function renderFloor() {
         } else {
             let startNum = parseInt(hall.start);
             let endNum = parseInt(hall.end);
-
-            const rendered = new Set();
+            let suffix = String(hall.end).replace(/[0-9]/g, '');
 
             for (let i = startNum; i <= endNum; i++) {
-                const baseId = String(i);
-                if (rendered.has(baseId)) continue;
 
-                if (grouped[baseId]) {
-                    const group = grouped[baseId];
+                let baseId = String(i);
 
-                    if (group.length > 1 || group[0].boothid.includes("-")) {
-                        grid.appendChild(createMergedBooth(baseId, group));
-                        rendered.add(baseId);
-                        continue;
-                    }
+                // 🚨 SKIP BASE IF VARIANT EXISTS
+                if (hasVariant(baseId)) {
+                    const variants = getVariants(baseId);
+                    variants.forEach(v => grid.appendChild(createBooth(v.boothid)));
+                    continue;
                 }
 
-                grid.appendChild(createBooth(baseId));
+                let finalId = (i === endNum && suffix) ? i + suffix : baseId;
+
+                grid.appendChild(createBooth(finalId));
             }
         }
 
@@ -122,95 +129,91 @@ function renderFloor() {
     });
 }
 
-/* ========================= */
-function createMergedBooth(baseId, group) {
-    const b = document.createElement("div");
-    const size = group.length;
-
-    b.className = "booth merged";
-    b.innerText = baseId;
-    b.dataset.id = baseId;
-
-    // 🔥 SPAN WIDTH
-    b.style.gridColumn = `span ${size}`;
-
-    const names = group.map(x => x.exhibitor).filter(x => x);
-    b.dataset.tooltip = names.join(", ") || "Grouped Booth";
-
-    let status = "available";
-    if (group.some(x => x.status === "booked")) status = "booked";
-    if (group.some(x => x.status === "plotting")) status = "plotting";
-
-    b.classList.add(status);
-
-    b.onclick = (e) => {
-        e.stopPropagation();
-
-        panel.classList.remove("hidden");
-        panelContent.innerHTML = `
-            <b>Booth Group:</b> ${baseId}<br>
-            <b>Total Units:</b> ${size}<br>
-            <b>Status:</b> ${status}<br><br>
-            ${group.map(x => `${x.boothid} - ${x.exhibitor || "-"}`).join("<br>")}
-        `;
-    };
-
-    return b;
-}
-
-/* ========================= */
+/* =========================
+   CREATE BOOTH
+========================= */
 function createBooth(id) {
     const b = document.createElement("div");
     b.className = "booth available";
     b.innerText = id;
     b.dataset.id = id;
+    b.dataset.name = "";
     b.dataset.tooltip = "Available";
 
     const d = allData.find(x => normalizeId(x.boothid) === normalizeId(id));
 
     if (d) {
-        b.className = "booth " + d.status;
-        b.dataset.tooltip = d.exhibitor || d.status;
+        let name = d.exhibitor;
+        let status = d.status;
+
+        if (name.length > 0 && name === name.toLowerCase()) status = "plotting";
+
+        b.className = "booth " + status;
+        b.dataset.name = name;
+        b.dataset.tooltip = name || status;
     }
 
     b.onclick = (e) => {
         e.stopPropagation();
+
+        const currentStatus = b.className.replace('booth ', '').replace(' highlight', '');
+        const statusProper = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1);
+
         panel.classList.remove("hidden");
         panelContent.innerHTML = `
             <b>Booth:</b> ${id}<br>
-            <b>Status:</b> ${b.classList[1]}<br>
-            <b>Exhibitor:</b> ${b.dataset.tooltip || "-"}
+            <b>Status:</b> ${statusProper}<br>
+            <b>Exhibitor:</b> ${b.dataset.name || "-"}
         `;
     };
 
     return b;
 }
 
-/* ========================= */
+/* =========================
+   JUMP TO ELEMENT
+========================= */
 function jumpToElement(el) {
     const elRect = el.getBoundingClientRect();
     const conRect = container.getBoundingClientRect();
 
-    const scrollX = container.scrollLeft + (elRect.left - conRect.left) - (conRect.width / 2);
-    const scrollY = container.scrollTop + (elRect.top - conRect.top) - (conRect.height / 2);
+    const scrollX = container.scrollLeft + (elRect.left - conRect.left) - (conRect.width / 2) + (elRect.width / 2);
+    const scrollY = container.scrollTop + (elRect.top - conRect.top) - (conRect.height / 2) + (elRect.height / 2);
 
     container.scrollTo({ left: scrollX, top: scrollY, behavior: "smooth" });
 }
 
-/* ========================= SEARCH */
+/* =========================
+   SEARCH
+========================= */
+searchBox.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showSuggestions(allData.filter(x => x.status !== "available"));
+});
+
 searchBox.addEventListener("input", () => {
     const val = searchBox.value.toLowerCase();
 
-    const list = allData.filter(x =>
-        x.status !== "available" &&
-        (
-            normalizeId(x.boothid).includes(val) ||
-            x.exhibitor.toLowerCase().includes(val)
+    showSuggestions(
+        allData.filter(x =>
+            x.status !== "available" &&
+            (
+                normalizeId(x.boothid).includes(normalizeId(val)) ||
+                (x.exhibitor || "").toLowerCase().includes(val)
+            )
         )
     );
+});
 
+function showSuggestions(list) {
     suggestions.innerHTML = "";
-    suggestions.style.display = list.length ? "block" : "none";
+
+    if (list.length === 0) {
+        suggestions.style.display = "none";
+        return;
+    }
+
+    suggestions.style.display = "block";
 
     list.forEach(x => {
         const div = document.createElement("div");
@@ -220,13 +223,12 @@ searchBox.addEventListener("input", () => {
         div.onclick = (e) => {
             e.stopPropagation();
 
-            const base = getBaseId(x.boothid);
-            const el = document.querySelector(`[data-id='${base}']`);
+            const el = document.querySelector(`[data-id='${x.boothid}']`);
 
             if (el) {
                 jumpToElement(el);
                 el.classList.add("highlight");
-                setTimeout(() => el.classList.remove("highlight"), 2000);
+                setTimeout(() => el.classList.remove("highlight"), 3000);
                 el.click();
             }
 
@@ -235,9 +237,11 @@ searchBox.addEventListener("input", () => {
 
         suggestions.appendChild(div);
     });
-});
+}
 
-/* ========================= ZOOM */
+/* =========================
+   ZOOM
+========================= */
 document.getElementById("zoomIn").onclick = () => {
     zoomLevel += 0.1;
     applyZoom();
@@ -253,32 +257,45 @@ function applyZoom() {
     document.getElementById("zoomLevel").innerText = Math.round(zoomLevel * 100) + "%";
 }
 
-/* ========================= DRAG */
+/* =========================
+   DRAGGING
+========================= */
 let isDown = false, startX, startY, scrollLeft, scrollTop;
 
 container.addEventListener("mousedown", (e) => {
     isDown = true;
-    startX = e.pageX;
-    startY = e.pageY;
+    startX = e.pageX - container.offsetLeft;
+    startY = e.pageY - container.offsetTop;
     scrollLeft = container.scrollLeft;
     scrollTop = container.scrollTop;
+    container.style.scrollBehavior = "auto";
 });
 
-container.addEventListener("mouseup", () => isDown = false);
 container.addEventListener("mouseleave", () => isDown = false);
+
+container.addEventListener("mouseup", () => {
+    isDown = false;
+    container.style.scrollBehavior = "smooth";
+});
 
 container.addEventListener("mousemove", (e) => {
     if (!isDown) return;
     e.preventDefault();
 
-    container.scrollLeft = scrollLeft - (e.pageX - startX);
-    container.scrollTop = scrollTop - (e.pageY - startY);
+    const x = e.pageX - container.offsetLeft;
+    const y = e.pageY - container.offsetTop;
+
+    container.scrollLeft = scrollLeft - (x - startX);
+    container.scrollTop = scrollTop - (y - startY);
 });
 
-/* ========================= */
+/* =========================
+   GLOBAL CLICK
+========================= */
 document.addEventListener("click", () => {
     panel.classList.add("hidden");
     suggestions.style.display = "none";
 });
 
+/* INIT */
 loadData();
