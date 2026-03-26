@@ -12,24 +12,32 @@ let zoomLevel = 1;
 
 /* LOAD DATA */
 async function loadData() {
-    const res = await fetch(G_SCRIPT_URL);
-    const raw = await res.json();
+    try {
+        const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
+        const text = await res.text();
 
-    allData = [];
+        const raw = JSON.parse(text);
 
-    raw.forEach(r => {
-        if (!r.boothid) return;
+        allData = [];
 
-        r.boothid.split(",").forEach(id => {
-            allData.push({
-                boothid: id.trim(),
-                exhibitor: (r.exhibitor || "").trim(),
-                status: (r.status || "available").toLowerCase()
+        raw.forEach(r => {
+            if (!r.boothid) return;
+
+            r.boothid.split(",").forEach(id => {
+                allData.push({
+                    boothid: id.trim(),
+                    exhibitor: (r.exhibitor || "").trim(),
+                    status: (r.status || "available").toLowerCase()
+                });
             });
         });
-    });
 
-    renderFloor();
+        renderFloor();
+
+    } catch (err) {
+        console.error("LOAD ERROR:", err);
+        alert("Failed loading data. Check console.");
+    }
 }
 
 /* HALL CONFIG */
@@ -47,6 +55,7 @@ function renderFloor() {
     floor.innerHTML = "";
 
     hallConfig.forEach(h => {
+
         const hallDiv = document.createElement("div");
         hallDiv.className = "hall";
 
@@ -59,15 +68,18 @@ function renderFloor() {
 
         for (let i = h.start; i <= h.end; i++) {
 
-            // get ALL variants (5061-A, 5061-B etc)
-            const matches = allData.filter(x => x.boothid.startsWith(i.toString()));
+            const baseId = String(i);
 
-            if (matches.length > 0) {
-                matches.forEach(m => {
-                    grid.appendChild(createBooth(m.boothid));
+            const variants = allData.filter(x =>
+                x.boothid.startsWith(baseId + "-")
+            );
+
+            if (variants.length > 0) {
+                variants.forEach(v => {
+                    grid.appendChild(createBooth(v.boothid));
                 });
             } else {
-                grid.appendChild(createBooth(i.toString()));
+                grid.appendChild(createBooth(baseId));
             }
         }
 
@@ -78,7 +90,6 @@ function renderFloor() {
 
 /* CREATE BOOTH */
 function createBooth(id) {
-
     const b = document.createElement("div");
     b.className = "booth available";
     b.innerText = id;
@@ -95,8 +106,8 @@ function createBooth(id) {
 
         b.onclick = (e) => {
             e.stopPropagation();
-
             panel.classList.remove("hidden");
+
             panelContent.innerHTML = `
                 <b>Booth:</b> ${id}<br>
                 <b>Status:</b> ${status}<br>
@@ -134,6 +145,7 @@ searchBox.addEventListener("input", () => {
                 el.classList.add("highlight");
 
                 setTimeout(() => el.classList.remove("highlight"), 5000);
+
                 el.click();
             }
 
@@ -170,41 +182,46 @@ container.addEventListener("mousemove", e=>{
 document.getElementById("zoomIn").onclick=()=>{
     zoomLevel+=0.1;
     floor.style.transform=`scale(${zoomLevel})`;
-};
-document.getElementById("zoomOut").onclick=()=>{
-    zoomLevel-=0.1;
-    floor.style.transform=`scale(${zoomLevel})`;
+    document.getElementById("zoomLevel").innerText=Math.round(zoomLevel*100)+"%";
 };
 
-/* CLOSE PANEL */
-document.addEventListener("click", ()=>{
-    panel.classList.add("hidden");
-    suggestions.style.display="none";
-});
+document.getElementById("zoomOut").onclick=()=>{
+    zoomLevel=Math.max(0.3, zoomLevel-0.1);
+    floor.style.transform=`scale(${zoomLevel})`;
+    document.getElementById("zoomLevel").innerText=Math.round(zoomLevel*100)+"%";
+};
 
 /* ANALYTICS */
 document.getElementById("analyticsBtn").onclick=()=>{
-    let result="";
+    let html = "";
 
     hallConfig.forEach(h=>{
-        let booths = allData.filter(x =>
-            parseInt(x.boothid) >= h.start &&
-            parseInt(x.boothid) <= h.end
-        );
+        let booked=0, plotting=0, total=0;
 
-        let booked = booths.filter(x=>x.status==="booked").length;
-        let plotting = booths.filter(x=>x.status==="plotting").length;
-        let available = booths.length - booked - plotting;
+        allData.forEach(x=>{
+            let num = parseInt(x.boothid);
+            if(num>=h.start && num<=h.end){
+                total++;
+                if(x.status==="booked") booked++;
+                else if(x.status==="plotting") plotting++;
+            }
+        });
 
-        result += `<b>${h.name}</b><br>
-        Available: ${available}<br>
+        html += `<b>${h.name}</b><br>
+        Available: ${total-booked-plotting}<br>
         Booked: ${booked}<br>
         Plotting: ${plotting}<br><br>`;
     });
 
     panel.classList.remove("hidden");
-    panelContent.innerHTML = result;
+    panelContent.innerHTML = html;
 };
+
+/* GLOBAL CLICK */
+document.addEventListener("click", ()=>{
+    panel.classList.add("hidden");
+    suggestions.style.display="none";
+});
 
 /* INIT */
 loadData();
