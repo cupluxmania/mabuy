@@ -18,22 +18,18 @@ function normalizeId(id) {
 }
 
 /* =========================
-   VARIANT CHECK
+   VARIANT LOGIC
 ========================= */
 function hasVariant(baseId) {
-    return allData.some(x =>
-        normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-")
-    );
+    return allData.some(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
 }
 
 function getVariants(baseId) {
-    return allData.filter(x =>
-        normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-")
-    );
+    return allData.filter(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
 }
 
 /* =========================
-   LOAD DATA (MULTI FIX)
+   LOAD DATA
 ========================= */
 async function loadData() {
     try {
@@ -45,7 +41,9 @@ async function loadData() {
         raw.forEach(row => {
             if (!row.boothid) return;
 
-            row.boothid.split(",").forEach(id => {
+            const booths = String(row.boothid).split(",");
+
+            booths.forEach(id => {
                 expanded.push({
                     boothid: id.trim(),
                     status: (row.status || "available").toLowerCase(),
@@ -56,17 +54,17 @@ async function loadData() {
 
         allData = expanded;
 
-        console.log("DATA READY:", allData);
-
         renderFloor();
+        initMiniMap();
 
     } catch (e) {
         console.error("Load error:", e);
+        renderFloor();
     }
 }
 
 /* =========================
-   HALL CONFIG (FULL BACK)
+   HALL CONFIG
 ========================= */
 const hallConfig = [
   {name:"Hall 5", start:5001, end:"5078-A"},
@@ -108,12 +106,9 @@ function renderFloor() {
 
                 let baseId = String(i);
 
-                // ✅ FIX: if variant exists → render ALL variants
                 if (hasVariant(baseId)) {
                     const variants = getVariants(baseId);
-                    variants.forEach(v => {
-                        grid.appendChild(createBooth(v.boothid));
-                    });
+                    variants.forEach(v => grid.appendChild(createBooth(v.boothid)));
                     continue;
                 }
 
@@ -127,23 +122,17 @@ function renderFloor() {
 }
 
 /* =========================
-   CREATE BOOTH (FIXED)
+   CREATE BOOTH
 ========================= */
 function createBooth(id) {
     const b = document.createElement("div");
-
     b.className = "booth available";
     b.innerText = id;
-
-    // 🔥 IMPORTANT FIX (was missing)
     b.dataset.id = id;
-
     b.dataset.name = "";
     b.dataset.tooltip = "Available";
 
-    const d = allData.find(x =>
-        normalizeId(x.boothid) === normalizeId(id)
-    );
+    const d = allData.find(x => normalizeId(x.boothid) === normalizeId(id));
 
     if (d) {
         let name = d.exhibitor;
@@ -159,7 +148,7 @@ function createBooth(id) {
     b.onclick = (e) => {
         e.stopPropagation();
 
-        const status = b.className.replace("booth ", "").replace(" highlight","");
+        const status = b.className.replace("booth ", "");
 
         panel.classList.remove("hidden");
         panelContent.innerHTML = `
@@ -173,21 +162,7 @@ function createBooth(id) {
 }
 
 /* =========================
-   JUMP TO ELEMENT
-========================= */
-function jumpToElement(el) {
-    const elRect = el.getBoundingClientRect();
-    const conRect = container.getBoundingClientRect();
-
-    container.scrollTo({
-        left: container.scrollLeft + (elRect.left - conRect.left) - 200,
-        top: container.scrollTop + (elRect.top - conRect.top) - 200,
-        behavior: "smooth"
-    });
-}
-
-/* =========================
-   SEARCH (FIXED)
+   SEARCH (FIXED PRIORITY)
 ========================= */
 searchBox.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -227,23 +202,116 @@ function showSuggestions(list) {
             e.stopPropagation();
 
             const el = document.querySelector(`[data-id='${x.boothid}']`);
+            if (!el) return;
 
-            if (el) {
-                jumpToElement(el);
-
-                el.classList.add("highlight");
-
-                setTimeout(() => {
-                    el.classList.remove("highlight");
-                }, 2500);
-
-                el.click();
-            }
+            el.classList.add("highlight-blink");
+            el.click();
 
             suggestions.style.display = "none";
+
+            setTimeout(() => jumpToElement(el), 100);
+
+            setTimeout(() => {
+                el.classList.remove("highlight-blink");
+            }, 8000);
         };
 
         suggestions.appendChild(div);
+    });
+}
+
+/* =========================
+   ANALYTICS
+========================= */
+function getHallFromBooth(id) {
+    id = String(id);
+    if (id.startsWith("5")) return "Hall 5";
+    if (id.startsWith("6")) return "Hall 6";
+    if (id.startsWith("7")) return "Hall 7";
+    if (id.startsWith("8")) return "Hall 8";
+    if (id.startsWith("9")) return "Hall 9";
+    if (id.startsWith("1")) return "Hall 10";
+    if (isNaN(id)) return "Ambulance";
+}
+
+document.getElementById("analyticsBtn").onclick = () => {
+
+    const hallStats = {};
+
+    hallConfig.forEach(h => {
+        hallStats[h.name] = { available: 0, booked: 0, plotting: 0 };
+    });
+
+    allData.forEach(x => {
+        const hall = getHallFromBooth(x.boothid);
+        if (!hallStats[hall]) return;
+
+        let status = x.status;
+
+        if (x.exhibitor && x.exhibitor === x.exhibitor.toLowerCase()) {
+            status = "plotting";
+        }
+
+        hallStats[hall][status]++;
+    });
+
+    let html = `<h3>📊 Hall Analytics</h3><br>`;
+
+    Object.keys(hallStats).forEach(hall => {
+        const d = hallStats[hall];
+        const total = d.available + d.booked + d.plotting;
+
+        html += `
+        <div style="margin-bottom:15px">
+            <b>${hall}</b><br>
+            Available: ${d.available}<br>
+            Booked: ${d.booked}<br>
+            Plotting: ${d.plotting}<br>
+            Total: ${total}
+        </div>
+        `;
+    });
+
+    panel.classList.remove("hidden");
+    panelContent.innerHTML = html;
+};
+
+/* =========================
+   MINI MAP
+========================= */
+function initMiniMap() {
+    const miniMap = document.getElementById("miniMap");
+    if (!miniMap) return;
+
+    miniMap.innerHTML = "";
+
+    hallConfig.forEach(hall => {
+        const div = document.createElement("div");
+        div.className = "miniHall";
+        div.innerText = hall.name;
+
+        div.onclick = () => {
+            const target = [...document.querySelectorAll(".hall")]
+                .find(h => h.querySelector("h2").innerText === hall.name);
+
+            if (target) jumpToElement(target);
+        };
+
+        miniMap.appendChild(div);
+    });
+}
+
+/* =========================
+   JUMP
+========================= */
+function jumpToElement(el) {
+    const elRect = el.getBoundingClientRect();
+    const conRect = container.getBoundingClientRect();
+
+    container.scrollTo({
+        left: container.scrollLeft + (elRect.left - conRect.left) - 200,
+        top: container.scrollTop + (elRect.top - conRect.top) - 200,
+        behavior: "smooth"
     });
 }
 
@@ -264,42 +332,6 @@ function applyZoom() {
     floor.style.transform = `scale(${zoomLevel})`;
     document.getElementById("zoomLevel").innerText = Math.round(zoomLevel * 100) + "%";
 }
-
-/* =========================
-   DRAGGING
-========================= */
-let isDown = false, startX, startY, scrollLeft, scrollTop;
-
-container.addEventListener("mousedown", (e) => {
-    isDown = true;
-    startX = e.pageX - container.offsetLeft;
-    startY = e.pageY - container.offsetTop;
-    scrollLeft = container.scrollLeft;
-    scrollTop = container.scrollTop;
-});
-
-container.addEventListener("mouseup", () => isDown = false);
-container.addEventListener("mouseleave", () => isDown = false);
-
-container.addEventListener("mousemove", (e) => {
-    if (!isDown) return;
-
-    e.preventDefault();
-
-    const x = e.pageX - container.offsetLeft;
-    const y = e.pageY - container.offsetTop;
-
-    container.scrollLeft = scrollLeft - (x - startX);
-    container.scrollTop = scrollTop - (y - startY);
-});
-
-/* =========================
-   GLOBAL CLICK
-========================= */
-document.addEventListener("click", () => {
-    panel.classList.add("hidden");
-    suggestions.style.display = "none";
-});
 
 /* INIT */
 loadData();
