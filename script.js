@@ -18,18 +18,22 @@ function normalizeId(id) {
 }
 
 /* =========================
-   VARIANT LOGIC
+   VARIANT CHECK
 ========================= */
 function hasVariant(baseId) {
-    return allData.some(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
+    return allData.some(x =>
+        normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-")
+    );
 }
 
 function getVariants(baseId) {
-    return allData.filter(x => normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-"));
+    return allData.filter(x =>
+        normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-")
+    );
 }
 
 /* =========================
-   LOAD DATA
+   LOAD DATA (KEEP MULTI)
 ========================= */
 async function loadData() {
     try {
@@ -59,12 +63,11 @@ async function loadData() {
 
     } catch (e) {
         console.error("Load error:", e);
-        renderFloor();
     }
 }
 
 /* =========================
-   HALL CONFIG
+   FULL HALL CONFIG (UNCHANGED)
 ========================= */
 const hallConfig = [
   {name:"Hall 5", start:5001, end:"5078-A"},
@@ -77,7 +80,7 @@ const hallConfig = [
 ];
 
 /* =========================
-   RENDER FLOOR
+   RENDER FLOOR (FIXED)
 ========================= */
 function renderFloor() {
     floor.innerHTML = "";
@@ -106,9 +109,12 @@ function renderFloor() {
 
                 let baseId = String(i);
 
+                // 🔥 IMPORTANT: SHOW VARIANT ONLY (NO BASE)
                 if (hasVariant(baseId)) {
                     const variants = getVariants(baseId);
-                    variants.forEach(v => grid.appendChild(createBooth(v.boothid)));
+                    variants.forEach(v => {
+                        grid.appendChild(createBooth(v.boothid));
+                    });
                     continue;
                 }
 
@@ -204,12 +210,15 @@ function showSuggestions(list) {
             const el = document.querySelector(`[data-id='${x.boothid}']`);
             if (!el) return;
 
+            // 🔥 PRIORITY: SELECT FIRST
             el.classList.add("highlight-blink");
             el.click();
 
             suggestions.style.display = "none";
 
-            setTimeout(() => jumpToElement(el), 100);
+            setTimeout(() => {
+                jumpToElement(el);
+            }, 100);
 
             setTimeout(() => {
                 el.classList.remove("highlight-blink");
@@ -221,10 +230,11 @@ function showSuggestions(list) {
 }
 
 /* =========================
-   ANALYTICS
+   ANALYTICS (PER HALL)
 ========================= */
 function getHallFromBooth(id) {
     id = String(id);
+
     if (id.startsWith("5")) return "Hall 5";
     if (id.startsWith("6")) return "Hall 6";
     if (id.startsWith("7")) return "Hall 7";
@@ -313,24 +323,6 @@ function jumpToElement(el) {
         top: container.scrollTop + (elRect.top - conRect.top) - 200,
         behavior: "smooth"
     });
-}
-
-/* =========================
-   ZOOM
-========================= */
-document.getElementById("zoomIn").onclick = () => {
-    zoomLevel += 0.1;
-    applyZoom();
-};
-
-document.getElementById("zoomOut").onclick = () => {
-    zoomLevel = Math.max(0.3, zoomLevel - 0.1);
-    applyZoom();
-};
-
-function applyZoom() {
-    floor.style.transform = `scale(${zoomLevel})`;
-    document.getElementById("zoomLevel").innerText = Math.round(zoomLevel * 100) + "%";
 }
 
 /* INIT */
