@@ -10,19 +10,87 @@ const panelContent = document.getElementById("panelContent");
 let allData = [];
 let zoomLevel = 1;
 
-/* NORMALIZE */
+/* =========================
+   🧼 CLEAN TEXT
+========================= */
+function cleanText(val) {
+    if (!val) return "";
+
+    let text = String(val)
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const lower = text.toLowerCase();
+
+    if (["-", "n/a", "na", "null", "undefined"].includes(lower)) {
+        return "";
+    }
+
+    return text;
+}
+
+/* =========================
+   🔥 NORMALIZE ID
+========================= */
 function normalizeId(id) {
-    return String(id).replace(/\s+/g, "").toLowerCase();
+    return String(id || "")
+        .replace(/\u00A0/g, "")
+        .replace(/\s+/g, "")
+        .trim()
+        .toLowerCase();
 }
 
-/* GET VARIANTS */
-function getVariants(baseId) {
-    return allData.filter(x =>
-        normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-")
-    );
+/* =========================
+   🔍 FALLBACK ANALYZER
+========================= */
+function analyzeStatus(text) {
+
+    const raw = cleanText(text);
+
+    if (!raw) return "available";
+
+    if (raw.toLowerCase().includes("agent")) return "agent";
+
+    if (/[a-zA-Z]/.test(raw)) {
+        return /[A-Z]/.test(raw) ? "sold" : "booked";
+    }
+
+    return "available";
 }
 
-/* LOAD DATA */
+/* =========================
+   🎯 STATUS FROM SHEET
+========================= */
+function getStatusFromSheet(row) {
+
+    let status = cleanText(row.status).toLowerCase();
+
+    if (status === "available") return "available";
+    if (status === "booked") return "booked";
+    if (status === "sold") return "sold";
+    if (status.includes("agent")) return "agent";
+
+    const fallbackText = [
+        cleanText(row.helper),
+        cleanText(row.exhibitor)
+    ].join(" ");
+
+    return analyzeStatus(fallbackText);
+}
+
+function getColor(status){
+    return {
+        available:"#3b82f6",
+        sold:"#ef4444",
+        booked:"#eab308",
+        agent:"#22c55e"
+    }[status];
+}
+
+/* =========================
+   LOAD DATA
+========================= */
 async function loadData() {
     const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
     const raw = await res.json();
@@ -36,36 +104,40 @@ async function loadData() {
 
         booths.forEach(id => {
 
-            let rawStatus = (row.status || "").toLowerCase();
-            let helper = (row.helper || "").toLowerCase();
-            let exhibitor = (row.exhibitor || "").toLowerCase();
-
-            // 🔥 AGENT DETECTION
-            let isAgent =
-                rawStatus.includes("agent") ||
-                helper.includes("agent") ||
-                exhibitor.includes("agent");
-
-            let status = "available";
-
-            if (isAgent) status = "agent";
-            else if (rawStatus === "booked") status = "sold";
-            else if (rawStatus === "plotting") status = "booked";
+            const boothIdClean = normalizeId(id);
+            const finalStatus = getStatusFromSheet(row);
 
             expanded.push({
-                boothid: id.trim(),
-                status: status,
-                exhibitor: (row.exhibitor || "").trim()
+                boothid: boothIdClean,
+                status: finalStatus,
+                exhibitor: cleanText(row.exhibitor)
             });
         });
     });
 
     allData = expanded;
-
     renderFloor();
 }
 
-/* HALL CONFIG */
+/* =========================
+   GET VARIANTS (-A/-B)
+========================= */
+function getVariants(baseId) {
+    return allData.filter(x =>
+        normalizeId(x.boothid).startsWith(normalizeId(baseId) + "-")
+    );
+}
+
+/* =========================
+   FORMAT DISPLAY ID (🔥 NEW)
+========================= */
+function formatDisplayId(id) {
+    return id.replace(/-([a-z])$/, (_, c) => "-" + c.toUpperCase());
+}
+
+/* =========================
+   HALL CONFIG
+========================= */
 const hallConfig = [
   {name:"Hall 5", start:5001, end:5078},
   {name:"Hall 6", start:6001, end:6189},
@@ -76,7 +148,9 @@ const hallConfig = [
   {name:"Ambulance", start:"A", end:"Z"}
 ];
 
-/* RENDER */
+/* =========================
+   RENDER
+========================= */
 function renderFloor() {
     floor.innerHTML = "";
 
@@ -103,7 +177,9 @@ function renderFloor() {
                 const variants = getVariants(baseId);
 
                 if (variants.length > 0) {
-                    variants.forEach(v => grid.appendChild(createBooth(v.boothid)));
+                    variants.forEach(v => {
+                        grid.appendChild(createBooth(v.boothid));
+                    });
                 } else {
                     grid.appendChild(createBooth(baseId));
                 }
@@ -115,45 +191,60 @@ function renderFloor() {
     });
 }
 
-/* CREATE BOOTH */
+/* =========================
+   CREATE BOOTH
+========================= */
 function createBooth(id) {
+
+    const normId = normalizeId(id);
+    const displayId = formatDisplayId(id);
 
     const b = document.createElement("div");
     b.className = "booth available";
-    b.innerText = id;
-    b.dataset.id = id;
+    b.innerText = displayId;
+    b.dataset.id = normId;
 
-    const d = allData.find(x => normalizeId(x.boothid) === normalizeId(id));
+    const matches = allData.filter(x => x.boothid === normId);
 
-    if (d) {
-        b.className = "booth " + d.status;
-        b.dataset.tooltip = d.exhibitor || d.status;
-        b.dataset.name = d.exhibitor;
-    } else {
-        b.dataset.tooltip = "Available";
+    let finalStatus = "available";
+    let exhibitorName = "";
+
+    if (matches.length) {
+
+        if (matches.some(x => x.status === "agent")) finalStatus = "agent";
+        else if (matches.some(x => x.status === "sold")) finalStatus = "sold";
+        else if (matches.some(x => x.status === "booked")) finalStatus = "booked";
+
+        exhibitorName = matches.map(x => x.exhibitor).filter(Boolean).join(", ");
     }
+
+    b.className = "booth " + finalStatus;
+
+    b.dataset.tooltip = `${displayId} • ${finalStatus.toUpperCase()}${exhibitorName ? " • " + exhibitorName : ""}`;
 
     b.onclick = (e) => {
         e.stopPropagation();
 
         panel.classList.remove("hidden");
         panelContent.innerHTML = `
-            <b>Booth:</b> ${id}<br>
-            <b>Status:</b> ${b.className.replace('booth ', '')}<br>
-            <b>Exhibitor:</b> ${b.dataset.name || "-"}
+            <b>Booth:</b> ${displayId}<br>
+            <b>Status:</b> <span style="color:${getColor(finalStatus)}">${finalStatus.toUpperCase()}</span><br>
+            <b>Exhibitor:</b> ${exhibitorName || "-"}
         `;
     };
 
     return b;
 }
 
-/* SEARCH */
+/* =========================
+   SEARCH
+========================= */
 searchBox.addEventListener("input", () => {
 
     const val = searchBox.value.toLowerCase();
 
     const result = allData.filter(x =>
-        normalizeId(x.boothid).includes(val) ||
+        x.boothid.includes(val) ||
         (x.exhibitor || "").toLowerCase().includes(val)
     );
 
@@ -164,18 +255,32 @@ searchBox.addEventListener("input", () => {
 
         const div = document.createElement("div");
         div.className = "suggestionItem";
-        div.innerText = `${x.boothid} - ${x.exhibitor}`;
+        div.innerText = `${formatDisplayId(x.boothid)} - ${x.exhibitor}`;
 
         div.onclick = () => {
             const el = document.querySelector(`[data-id='${x.boothid}']`);
-            if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-                el.classList.add("highlight");
-                setTimeout(() => el.classList.remove("highlight"), 4000);
+            if (el) {
+
+                el.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                    inline: "center"
+                });
+
+                document.querySelectorAll(".highlight, .blink").forEach(b => {
+                    b.classList.remove("highlight", "blink");
+                });
+
+                el.classList.add("highlight", "blink");
+
+                setTimeout(() => {
+                    el.classList.remove("highlight", "blink");
+                }, 5000);
 
                 el.click();
             }
+
             suggestions.style.display = "none";
         };
 
@@ -183,7 +288,9 @@ searchBox.addEventListener("input", () => {
     });
 });
 
-/* DRAG */
+/* =========================
+   DRAG
+========================= */
 let isDown = false, startX, startY, scrollLeft, scrollTop;
 
 container.addEventListener("mousedown", (e) => {
@@ -203,7 +310,9 @@ container.addEventListener("mousemove", (e) => {
     container.scrollTop = scrollTop - (e.pageY - startY);
 });
 
-/* ZOOM */
+/* =========================
+   ZOOM
+========================= */
 document.getElementById("zoomIn").onclick = () => {
     zoomLevel += 0.1;
     floor.style.transform = `scale(${zoomLevel})`;
@@ -213,7 +322,9 @@ document.getElementById("zoomOut").onclick = () => {
     floor.style.transform = `scale(${zoomLevel})`;
 };
 
-/* CLOSE */
+/* =========================
+   CLOSE
+========================= */
 document.addEventListener("click", () => {
     panel.classList.add("hidden");
     suggestions.style.display = "none";
