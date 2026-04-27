@@ -97,10 +97,8 @@ function createBooth(id) {
     const formatted = formatBoothId(id);
     const norm = normalizeId(formatted);
 
-    // 1. exact match
     let match = allData.find(x => x.boothid === norm);
 
-    // 2. fallback: find suffix (5096 → 5096-A)
     if (!match) {
         match = allData.find(x => x.boothid.startsWith(norm + "-"));
     }
@@ -125,13 +123,30 @@ function createBooth(id) {
     b.onclick = (e) => {
         e.stopPropagation();
 
+        // clear old highlight
         document.querySelectorAll(".highlight, .blink")
             .forEach(x => x.classList.remove("highlight","blink"));
 
         b.classList.add("highlight","blink");
-
         setTimeout(()=>b.classList.remove("highlight","blink"),5000);
 
+        // 🔥 PERFECT CENTERING
+        const containerRect = container.getBoundingClientRect();
+        const boothRect = b.getBoundingClientRect();
+
+        const offsetX = boothRect.left - containerRect.left;
+        const offsetY = boothRect.top - containerRect.top;
+
+        const scrollX = offsetX - container.clientWidth / 2 + boothRect.width / 2;
+        const scrollY = offsetY - container.clientHeight / 2 + boothRect.height / 2;
+
+        container.scrollTo({
+            left: container.scrollLeft + scrollX,
+            top: container.scrollTop + scrollY,
+            behavior: "smooth"
+        });
+
+        // panel
         panel.classList.remove("hidden");
         panelContent.innerHTML = `
             <b>Booth:</b> ${match.display}<br>
@@ -218,8 +233,7 @@ searchBox.addEventListener("input", () => {
         div.onclick=()=>{
             const el=document.querySelector(`[data-id='${normalizeId(x.display)}']`);
             if(el){
-                el.scrollIntoView({behavior:"smooth",block:"center"});
-                el.click();
+                el.click(); // 🔥 centering handled inside click
             }
             suggestions.style.display="none";
         };
