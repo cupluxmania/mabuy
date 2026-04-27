@@ -17,9 +17,24 @@ function cleanText(val) {
     return String(val).replace(/\s+/g, " ").trim();
 }
 
-/* NORMALIZE */
+/* NORMALIZE (FOR MATCHING ONLY) */
 function normalizeId(id) {
-    return String(id || "").replace(/\s+/g, "").toLowerCase();
+    return String(id || "").replace(/\s+/g, "").replace("-", "").toLowerCase();
+}
+
+/* FORMAT (FOR DISPLAY ONLY) */
+function formatBoothId(id) {
+    if (!id) return "";
+
+    const clean = String(id).replace(/\s+/g, "").toUpperCase();
+
+    const match = clean.match(/^(\d+)([A-Z])?$/);
+
+    if (match) {
+        return match[2] ? `${match[1]}-${match[2]}` : match[1];
+    }
+
+    return clean;
 }
 
 /* STATUS */
@@ -29,7 +44,7 @@ function getStatus(row) {
     return "available";
 }
 
-/* LOAD DATA (FIXED) */
+/* LOAD DATA */
 async function loadData() {
     try {
         const res = await fetch(`${G_SCRIPT_URL}?cmd=read&t=${Date.now()}`);
@@ -45,9 +60,11 @@ async function loadData() {
             const each = booths.length ? size / booths.length : 0;
 
             booths.forEach(id => {
+                const formatted = formatBoothId(id);
+
                 expanded.push({
-                    boothid: normalizeId(id),
-                    display: id,
+                    boothid: normalizeId(formatted),
+                    display: formatted,
                     exhibitor: cleanText(row.exhibitor),
                     status: getStatus(row),
                     sqm: each
@@ -77,7 +94,8 @@ const hallConfig = [
 
 /* CREATE BOOTH */
 function createBooth(id) {
-    const norm = normalizeId(id);
+    const formatted = formatBoothId(id);
+    const norm = normalizeId(formatted);
     const match = allData.find(x => x.boothid === norm);
 
     const b = document.createElement("div");
@@ -86,12 +104,12 @@ function createBooth(id) {
 
     if (!match) {
         b.classList.add("available");
-        b.innerText = id;
+        b.innerText = formatted;
         return b;
     }
 
     b.classList.add(match.status);
-    b.innerText = id;
+    b.innerText = match.display;
 
     b.dataset.tooltip = match.exhibitor
         ? `${match.exhibitor} • ${match.sqm} Sqm`
@@ -107,7 +125,7 @@ function createBooth(id) {
 
         panel.classList.remove("hidden");
         panelContent.innerHTML = `
-            <b>Booth:</b> ${id}<br>
+            <b>Booth:</b> ${match.display}<br>
             <b>Size:</b> ${match.sqm} Sqm<br>
             <b>Status:</b> ${match.status.toUpperCase()}<br>
             <b>Exhibitor:</b> ${match.exhibitor || "-"}
@@ -173,7 +191,7 @@ function renderFloor() {
 
 /* SEARCH */
 searchBox.addEventListener("input", () => {
-    const val = searchBox.value.toLowerCase();
+    const val = searchBox.value.toLowerCase().replace("-", "");
     suggestions.innerHTML="";
 
     const result = allData.filter(x =>
@@ -221,8 +239,14 @@ container.addEventListener("mousemove",e=>{
 });
 
 /* ZOOM */
-document.getElementById("zoomIn").onclick=()=>{zoomLevel+=0.1;floor.style.transform=`scale(${zoomLevel})`;};
-document.getElementById("zoomOut").onclick=()=>{zoomLevel=Math.max(0.3,zoomLevel-0.1);floor.style.transform=`scale(${zoomLevel})`;};
+document.getElementById("zoomIn").onclick=()=>{
+    zoomLevel+=0.1;
+    floor.style.transform=`scale(${zoomLevel})`;
+};
+document.getElementById("zoomOut").onclick=()=>{
+    zoomLevel=Math.max(0.3,zoomLevel-0.1);
+    floor.style.transform=`scale(${zoomLevel})`;
+};
 
 /* LEGEND FILTER */
 document.querySelectorAll(".legend-item").forEach(item=>{
