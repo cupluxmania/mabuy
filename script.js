@@ -17,18 +17,20 @@ function cleanText(val) {
     return String(val).replace(/\s+/g, " ").trim();
 }
 
-/* NORMALIZE (FOR MATCHING ONLY) */
+/* NORMALIZE (STRICT - KEEP DASH) */
 function normalizeId(id) {
-    return String(id || "").replace(/\s+/g, "").replace("-", "").toLowerCase();
+    return String(id || "")
+        .replace(/\s+/g, "")
+        .toUpperCase();
 }
 
-/* FORMAT (FOR DISPLAY ONLY) */
+/* FORMAT DISPLAY */
 function formatBoothId(id) {
     if (!id) return "";
 
     const clean = String(id).replace(/\s+/g, "").toUpperCase();
 
-    const match = clean.match(/^(\d+)([A-Z])?$/);
+    const match = clean.match(/^(\d+)(?:-?([A-Z]))?$/);
 
     if (match) {
         return match[2] ? `${match[1]}-${match[2]}` : match[1];
@@ -55,7 +57,11 @@ async function loadData() {
         raw.forEach(row => {
             if (!row.boothid) return;
 
-            const booths = String(row.boothid).split(",").map(x => x.trim()).filter(Boolean);
+            const booths = String(row.boothid)
+                .split(",")
+                .map(x => x.trim())
+                .filter(Boolean);
+
             const size = parseFloat(row.size) || 0;
             const each = booths.length ? size / booths.length : 0;
 
@@ -63,7 +69,7 @@ async function loadData() {
                 const formatted = formatBoothId(id);
 
                 expanded.push({
-                    boothid: normalizeId(formatted),
+                    boothid: normalizeId(formatted), // STRICT KEY
                     display: formatted,
                     exhibitor: cleanText(row.exhibitor),
                     status: getStatus(row),
@@ -96,6 +102,8 @@ const hallConfig = [
 function createBooth(id) {
     const formatted = formatBoothId(id);
     const norm = normalizeId(formatted);
+
+    // ✅ STRICT MATCH ONLY
     const match = allData.find(x => x.boothid === norm);
 
     const b = document.createElement("div");
@@ -118,7 +126,9 @@ function createBooth(id) {
     b.onclick = (e) => {
         e.stopPropagation();
 
-        document.querySelectorAll(".highlight, .blink").forEach(x => x.classList.remove("highlight","blink"));
+        document.querySelectorAll(".highlight, .blink")
+            .forEach(x => x.classList.remove("highlight","blink"));
+
         b.classList.add("highlight","blink");
 
         setTimeout(()=>b.classList.remove("highlight","blink"),5000);
@@ -191,12 +201,12 @@ function renderFloor() {
 
 /* SEARCH */
 searchBox.addEventListener("input", () => {
-    const val = searchBox.value.toLowerCase().replace("-", "");
+    const val = normalizeId(searchBox.value);
     suggestions.innerHTML="";
 
     const result = allData.filter(x =>
         x.boothid.includes(val) ||
-        (x.exhibitor || "").toLowerCase().includes(val)
+        (x.exhibitor || "").toLowerCase().includes(searchBox.value.toLowerCase())
     );
 
     suggestions.style.display = result.length ? "block":"none";
