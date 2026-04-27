@@ -17,25 +17,19 @@ function cleanText(val) {
     return String(val).replace(/\s+/g, " ").trim();
 }
 
-/* NORMALIZE (STRICT - KEEP DASH) */
+/* NORMALIZE */
 function normalizeId(id) {
-    return String(id || "")
-        .replace(/\s+/g, "")
-        .toUpperCase();
+    return String(id || "").replace(/\s+/g, "").toUpperCase();
 }
 
-/* FORMAT DISPLAY */
+/* FORMAT */
 function formatBoothId(id) {
     if (!id) return "";
-
     const clean = String(id).replace(/\s+/g, "").toUpperCase();
-
     const match = clean.match(/^(\d+)(?:-?([A-Z]))?$/);
-
     if (match) {
         return match[2] ? `${match[1]}-${match[2]}` : match[1];
     }
-
     return clean;
 }
 
@@ -69,7 +63,7 @@ async function loadData() {
                 const formatted = formatBoothId(id);
 
                 expanded.push({
-                    boothid: normalizeId(formatted), // STRICT KEY
+                    boothid: normalizeId(formatted),
                     display: formatted,
                     exhibitor: cleanText(row.exhibitor),
                     status: getStatus(row),
@@ -103,8 +97,13 @@ function createBooth(id) {
     const formatted = formatBoothId(id);
     const norm = normalizeId(formatted);
 
-    // ✅ STRICT MATCH ONLY
-    const match = allData.find(x => x.boothid === norm);
+    // 1. exact match
+    let match = allData.find(x => x.boothid === norm);
+
+    // 2. fallback: find suffix (5096 → 5096-A)
+    if (!match) {
+        match = allData.find(x => x.boothid.startsWith(norm + "-"));
+    }
 
     const b = document.createElement("div");
     b.className = "booth";
@@ -217,7 +216,7 @@ searchBox.addEventListener("input", () => {
         div.innerText=`${x.display} - ${x.exhibitor}`;
 
         div.onclick=()=>{
-            const el=document.querySelector(`[data-id='${x.boothid}']`);
+            const el=document.querySelector(`[data-id='${normalizeId(x.display)}']`);
             if(el){
                 el.scrollIntoView({behavior:"smooth",block:"center"});
                 el.click();
