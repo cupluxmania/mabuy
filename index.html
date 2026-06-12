@@ -3,148 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Mabuy Dashboard</title>
-
-<link rel="stylesheet" href="style.css">
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Hospital Expo — Event Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="index.css">
 </head>
-
 <body>
 
-<header>Int'l Hospital Expo @ ICE BSD 2026</header>
+<header>
+    <div class="header-brand">HOSPEX</div>
+    <a class="header-sub" href="https://hospital-expo.com" target="_blank" rel="noopener">Event Organizations</a>
+</header>
 
-<div class="topNav">
-    <button onclick="showPage('floorPage')">Floorplan</button>
-    <button onclick="showPage('databasePage')">Overview</button>
+<div class="hero">
+    <div class="hero-eyebrow">Hospital Expo Events Hub</div>
+    <h1 class="hero-title">Hospital Expo Events @2026</h1>
+    <p class="hero-desc">Monitor floorplan status and booth sales across all active and upcoming hospital exhibitions in real time.</p>
+    <div class="stat-row">
+        <div class="stat-pill"><span class="num">5</span><span class="lbl">Events</span></div>
+        <div class="stat-pill"><span class="num" id="totalBooths">—</span><span class="lbl">Total Booths</span></div>
+        <div class="stat-pill"><span class="num" id="totalSold">—</span><span class="lbl">Sold</span></div>
+    </div>
 </div>
 
-<!-- FLOOR -->
-<div id="floorPage" class="page active">
-
-    <div class="searchWrapper">
-
-        <input
-            id="searchBox"
-            placeholder="🔍 Search exhibitor or booth..."
-            autocomplete="off"
-        >
-
-        <div id="suggestions"></div>
-
+<main>
+    <div class="section-header">
+        <span class="section-title">All Events</span>
+        <span class="section-count">5 events</span>
     </div>
 
-    <div class="floorLegend">
+    <div class="event-grid" id="eventGrid">
 
-        <div class="legendItem available">
-            <span class="dot available"></span>
-            Available
-        </div>
-
-        <div class="legendItem sold">
-            <span class="dot sold"></span>
-            Sold
-        </div>
-
-        <div class="legendItem booked">
-            <span class="dot booked"></span>
-            Booked
-        </div>
-
-        <div class="legendItem agent">
-            <span class="dot agent"></span>
-            Agent
-        </div>
+        <!-- Cards injected by JS -->
 
     </div>
+</main>
 
-    <div id="floorContainer">
-        <div id="floor"></div>
-    </div>
-
-    <div id="zoomWidget" class="zoom-widget">
-
-        <button id="zoomOut">−</button>
-
-        <span id="zoomLevel">100%</span>
-
-        <button id="zoomIn">+</button>
-
-    </div>
-
-</div>
-
-<!-- DATABASE -->
-<div id="databasePage" class="page">
-
-    <div class="databaseWrapper">
-
-        <!-- CHARTS -->
-        <div class="databaseCharts">
-
-            <div class="databaseChartCard">
-                <h3>Booth Status</h3>
-                <canvas id="chart"></canvas>
-            </div>
-
-            <div class="databaseChartCard">
-                <h3>SQM / Stand / Booth</h3>
-                <canvas id="databaseChart1"></canvas>
-            </div>
-
-            <div class="databaseChartCard">
-                <h3>Local vs Overseas</h3>
-                <canvas id="databaseChart2"></canvas>
-            </div>
-
-        </div>
-
-        <!-- TABLES -->
-        <div class="databaseGrid">
-
-            <div class="databaseTableCard">
-
-                <h3>Database Summary</h3>
-
-                <div class="tableScroll">
-
-                    <table id="databaseTable1">
-                        <thead></thead>
-                        <tbody></tbody>
-                    </table>
-
-                </div>
-
-            </div>
-
-            <div class="databaseTableCard">
-
-                <h3>Booth Type Summary</h3>
-
-                <div class="tableScroll">
-
-                    <table id="databaseTable2">
-                        <thead></thead>
-                        <tbody></tbody>
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- SIDE PANEL -->
-<div id="sidePanel" class="hidden">
-    <div id="panelContent"></div>
-</div>
-
-<script src="script.js"></script>
-
+<script src="index.js"></script>
 </body>
 </html>
